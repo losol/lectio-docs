@@ -57,7 +57,7 @@ Monorepo — pnpm workspace (packages/* + apps/* + examples/*)
 
 packages/lectio-docs            @eventuras/lectio-docs — vanilla TS/Node, no React
   .              collect / runCollect / defineDocsConfig   (Node, build-time)
-  ./content      (planned) createContentSource: page tree + getPage — pure TS, agnostic
+  ./content      createContentSource: getTree / getPages / getPage — pure TS, agnostic
   ./search       OramaProvider + types
   ./build-index  buildSearchIndex
 
@@ -117,9 +117,10 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - README, CI (build + typecheck), changesets.
 
 ### Phase 2 — Agnostic content-source API *(the core new capability)*
-- Emit `manifest.json` from `collect()` (page tree + frontmatter + slugs).
-- `./content`: `createContentSource({ manifest, loadBody })` → `getTree` /
-  `getPages` / `getPage`. Pure TS, no React/Next.
+- ✅ `./content`: `createContentSource({ manifest, loadBody })` → `getTree` /
+  `getPages` / `getPage`. Pure TS, no React/Next. Manifest is a flat `pages[]`;
+  the nav tree is derived at runtime, and the host injects `loadBody`.
+- Emit `manifest.json` from `collect()` (frontmatter + slugs + file paths).
 - Validate with `apps/site` (the **React Router** reference site — proves
   agnosticism) plus a Next example under `examples/` — iteration stays atomic
   while the API is still moving.
@@ -152,6 +153,16 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - **Own identity / scope.** Kept `@eventuras/lectio-docs`. A rename to a
   dedicated scope (own npm org + GitHub org) can happen later if the product
   warrants it — extraction doesn't force it.
+- **Rendering substrate: plain markdown + components map → MDX later.** Body
+  rendering lives in the React layer, never the core. Start with plain markdown
+  mapped via a `components` map (ratio-ui as one *optional preset*, not hardcoded,
+  so "ratio-ui is a convenience" stays true); upgrade to **MDX** for components
+  authored *inside* content (batteries / reference site). MDX is the substrate
+  under both "own ratio-ui preset" and "adopt Fumadocs" (below). Caveats: MDX runs
+  arbitrary code (trusted authors only) and `.mdx` with imports isn't portable —
+  keep collected lib/README content plain `.md`. `getPage().body` stays the
+  raw-markdown path; MDX is a separate host-side loader, so the content-source
+  contract is unchanged either way.
 - **Optional standalone renderer.** For the pure standalone-site case, Lectio can
   recommend/adapt to an existing renderer (Fumadocs is the best fit — Next.js,
   headless core, native Orama search) rather than building a bespoke theme.
