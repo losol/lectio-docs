@@ -120,7 +120,8 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - ✅ `./content`: `createContentSource({ manifest, loadBody })` → `getTree` /
   `getPages` / `getPage`. Pure TS, no React/Next. Manifest is a flat `pages[]`;
   the nav tree is derived at runtime, and the host injects `loadBody`.
-- Emit `manifest.json` from `collect()` (frontmatter + slugs + file paths).
+- ✅ Emit `manifest.json` from `collect()` — a flat `pages[]` of `PageMeta`
+  (slug, title, description, source, `file`, section, frontmatter).
 - Validate with `apps/site` (the **React Router** reference site — proves
   agnosticism) plus a Next example under `examples/` — iteration stays atomic
   while the API is still moving.

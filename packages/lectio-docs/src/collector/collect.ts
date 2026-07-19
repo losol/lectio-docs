@@ -3,6 +3,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import fg from 'fast-glob';
 
+import type { Manifest, PageMeta } from '../content/types.js';
 import type { DocSource, DocsConfig } from './config.js';
 
 interface CollectOptions {
@@ -15,13 +16,16 @@ interface CollectOptions {
 }
 
 /**
- * Collect documentation from across the repo into a single output directory.
+ * Collect documentation from across the repo into a single output directory,
+ * and emit a `manifest.json` describing every collected page.
  *
  * Each source glob is resolved relative to rootDir. Files are copied to
  * config.output (relative to configDir) under the source's target path.
  *
- * README.md files are renamed to index.md to work as directory index pages.
- * Frontmatter (title, description) is auto-generated from package.json when configured.
+ * `README.md` is renamed to `<parent-dir>.md` (e.g. libs/event-sdk/README.md →
+ * <target>/event-sdk.md). Frontmatter (title, description) is auto-generated
+ * from package.json when configured. The manifest is the input to the
+ * framework-agnostic `./content` content source.
  */
 export async function collect({ rootDir, config, configDir }: CollectOptions): Promise<void> {
   const outputDir = resolve(configDir, config.output);
@@ -34,6 +38,7 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
   mkdirSync(outputDir, { recursive: true });
 
   let totalFiles = 0;
+  const pages: PageMeta[] = [];
 
   for (const source of config.sources) {
     const files = await fg(source.glob, {
@@ -52,20 +57,35 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
       const targetPath = buildTargetPath(file, source, outputDir);
 
       const content = readFileSync(sourcePath, 'utf-8');
-      const enriched = enrichContent(content, sourcePath, source, rootDir);
+      const { content: enriched, frontmatter } = enrichContent(content, sourcePath, source, rootDir);
 
       const targetDir = dirname(targetPath);
       mkdirSync(targetDir, { recursive: true });
       writeFileSync(targetPath, enriched);
 
-      const relSource = relative(rootDir, sourcePath);
-      const relTarget = relative(outputDir, targetPath);
-      console.log(`  ${relSource} → ${relTarget}`);
+      const relTarget = relative(outputDir, targetPath).replaceAll('\\', '/');
+      const slug = fileToSlug(relTarget);
+      pages.push({
+        slug,
+        title: String(frontmatter.title ?? slugTitle(slug)),
+        description: frontmatter.description == null ? undefined : String(frontmatter.description),
+        source: String(frontmatter.source ?? relative(rootDir, sourcePath)).replaceAll('\\', '/'),
+        file: relTarget,
+        section: source.target,
+        frontmatter,
+      });
+
+      console.log(`  ${relative(rootDir, sourcePath)} → ${relTarget}`);
       totalFiles++;
     }
   }
 
+  const manifest: Manifest = { version: 1, pages };
+  const manifestPath = join(outputDir, 'manifest.json');
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+
   console.log(`\nCollected ${totalFiles} files into ${relative(rootDir, outputDir)}`);
+  console.log(`Wrote manifest: ${relative(rootDir, manifestPath)} (${pages.length} pages)`);
 }
 
 /**
@@ -115,7 +135,12 @@ function getGlobBase(glob: string): string {
  * Enrich file content with frontmatter from package.json if configured,
  * or ensure existing frontmatter is preserved.
  */
-function enrichContent(content: string, sourcePath: string, source: DocSource, rootDir: string): string {
+function enrichContent(
+  content: string,
+  sourcePath: string,
+  source: DocSource,
+  rootDir: string,
+): { content: string; frontmatter: Record<string, unknown> } {
   const { frontmatter: existingFrontmatter, body } = parseFrontmatter(content);
 
   const frontmatter: Record<string, unknown> = { ...existingFrontmatter };
@@ -143,10 +168,28 @@ function enrichContent(content: string, sourcePath: string, source: DocSource, r
     }
   }
 
-  // Add source reference (relative to repo root for portability)
-  frontmatter.source = relative(rootDir, sourcePath);
+  // Add source reference (relative to repo root, POSIX separators for portability)
+  frontmatter.source = relative(rootDir, sourcePath).replaceAll('\\', '/');
 
-  return formatFrontmatter(frontmatter) + body;
+  return { content: formatFrontmatter(frontmatter) + body, frontmatter };
+}
+
+/**
+ * Map an output-relative file path to a URL slug.
+ * "index.md" → "/", "guides/index.md" → "/guides", "libraries/x.md" → "/libraries/x"
+ */
+function fileToSlug(file: string): string {
+  let slug = '/' + file.replaceAll('\\', '/');
+  slug = slug.replace(/\.mdx?$/i, '');
+  slug = slug.replace(/\/index$/i, '');
+  return slug || '/';
+}
+
+/** Fallback page title derived from the slug's last segment. */
+function slugTitle(slug: string): string {
+  const seg = slug === '/' ? 'Home' : slug.slice(slug.lastIndexOf('/') + 1);
+  const s = seg.replace(/[-_]/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /**
