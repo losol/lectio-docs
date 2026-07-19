@@ -4,7 +4,7 @@ import {
   useDocsSearch,
   type SearchProvider,
   type SearchResult,
-} from '@eventuras/lectio-docs/react';
+} from '@eventuras/lectio-docs-react';
 
 // Trivial in-memory provider — a stand-in until the collector-backed Orama
 // index (roadmap Phase 2, the `./content` + `build-index` seam) is wired in.
@@ -62,7 +62,7 @@ export default function Home() {
       <h1 style={{ marginBottom: '0.25rem' }}>Lectio Docs</h1>
       <p style={{ color: '#666', marginTop: 0 }}>
         Reference site — workspace stub. Drives <code>useDocsSearch</code> from{' '}
-        <code>@eventuras/lectio-docs/react</code> against a sample index.
+        <code>@eventuras/lectio-docs-react</code> against a sample index.
       </p>
       <input
         type="search"

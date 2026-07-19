@@ -5,8 +5,8 @@ import {
   type CommandPaletteItem,
 } from '@eventuras/ratio-ui/core/CommandPalette';
 
-import type { SearchProvider, SearchResult } from '../types.js';
-import { useDocsSearch } from '../hooks/use-docs-search.js';
+import type { SearchProvider, SearchResult } from '@eventuras/lectio-docs/search';
+import { useDocsSearch } from './use-docs-search.js';
 
 interface SearchProps {
   /** Search provider instance (e.g. OramaProvider) */

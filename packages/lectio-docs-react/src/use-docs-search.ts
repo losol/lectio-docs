@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { SearchProvider, SearchResult } from '../types.js';
+import type { SearchProvider, SearchResult } from '@eventuras/lectio-docs/search';
 
 export interface UseDocsSearchOptions {
   /** Search provider instance (e.g. OramaProvider) */

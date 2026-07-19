@@ -32,12 +32,15 @@ config-only or is retired.
 - **Collector is the differentiator.** Gathering `docs/**` + `libs/*/README.md` +
   app docs into one tree is the gap Nextra/Docusaurus/Starlight don't fill.
 - **Framework-agnostic core.** Consumers span different frameworks — the API
-  must not assume Next.js.
+  must not assume Next.js. Enforced by a package boundary: the core
+  (`@eventuras/lectio-docs`) is vanilla TS/Node with zero React; the React
+  bindings live in a separate `@eventuras/lectio-docs-react`.
 - **Search is opt-in per host.** Orama-based; hosts with their own search
   (e.g. Payload) don't need it.
 - **`ratio-ui` is a convenience, not a requirement.** The styled `<Search>` uses
-  ratio-ui, but it's an *optional peer* — the core is ratio-ui-free, so other
-  design systems are possible.
+  ratio-ui, but it's an *optional peer* of `@eventuras/lectio-docs-react` — the
+  headless `useDocsSearch` hook is ratio-ui-free, so other design systems are
+  possible.
 
 ## Target consumers
 
@@ -49,13 +52,21 @@ config-only or is retired.
 
 ## Architecture
 
-```
-@eventuras/lectio-docs
+```text
+Monorepo — pnpm workspace (packages/* + apps/* + examples/*)
+
+packages/lectio-docs            @eventuras/lectio-docs — vanilla TS/Node, no React
   .              collect / runCollect / defineDocsConfig   (Node, build-time)
   ./content      (planned) createContentSource: page tree + getPage — pure TS, agnostic
   ./search       OramaProvider + types
   ./build-index  buildSearchIndex
-  ./react        useDocsSearch (headless hook) + <Search> (ratio-ui, optional)
+
+packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
+  .              useDocsSearch (headless hook) + <Search> (ratio-ui, optional peer)
+                 type-only coupling to the core (SearchProvider / SearchResult)
+
+apps/site                       React Router (framework mode, v8) reference site
+  consumes @eventuras/lectio-docs-react; the future dev-docs replacement (Phase 4)
 ```
 
 The agnostic seam: `collect()` emits a `manifest.json`; the runtime
@@ -84,20 +95,34 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - **eventuras is untouched** — it still has its own copy and `dev-docs` still
   works. Migration happens only after Lectio is published.
 
+### Done — monorepo + React split (this repo)
+- Converted the standalone package into a **pnpm workspace** (`packages/*` +
+  `apps/*` + `examples/*`); the core moved to `packages/lectio-docs`.
+- **Split the React bindings out** into `@eventuras/lectio-docs-react`
+  (`useDocsSearch` + `<Search>`). The core is now vanilla TS/Node with no React
+  dependency at all; the React package couples to it type-only.
+- Scaffolded `apps/site` — a **React Router (framework mode, v8)** reference site
+  that drives `useDocsSearch` against a sample index (proof the workspace wiring
+  and the React bindings run under SSR + hydration). Real content-source wiring
+  is Phase 2.
+
 ---
 
 ## Roadmap
 
 ### Phase 1 — Stand up the repo
-- Commit the standalone setup; create the GitHub remote and push.
+- ✅ Converted to a pnpm workspace; core in `packages/lectio-docs`, React
+  bindings in `packages/lectio-docs-react`, reference site in `apps/site`.
+- Create the GitHub remote and push.
 - README, CI (build + typecheck), changesets.
 
 ### Phase 2 — Agnostic content-source API *(the core new capability)*
 - Emit `manifest.json` from `collect()` (page tree + frontmatter + slugs).
 - `./content`: `createContentSource({ manifest, loadBody })` → `getTree` /
   `getPages` / `getPage`. Pure TS, no React/Next.
-- Validate with a **colocated React Router example** (proves agnosticism) plus a
-  Next example — iteration stays atomic while the API is still moving.
+- Validate with `apps/site` (the **React Router** reference site — proves
+  agnosticism) plus a Next example under `examples/` — iteration stays atomic
+  while the API is still moving.
 - Make `build-index` index the manifest/markdown instead of Next's built HTML
   (the one remaining Next-ism), so RR and other hosts get search too.
 
@@ -117,6 +142,13 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 
 ## Deferred decisions
 
+- **Positioning: "toolkit, not SSG" → possibly "toolkit *with* SSG".** The
+  headless core is identical either way; only how much we invest in / market the
+  `apps/site` reference site differs. Explicitly *not* decided — kept open by
+  holding the seam: render/theme opinions stay in `apps/site`, never in the core.
+- **peer vs dep for the core in `@eventuras/lectio-docs-react`.** Currently a
+  plain `dependency` (`workspace:*`) for zero friction. At publish time, weigh a
+  `peer` instead so consumers using both packages share one core version.
 - **Own identity / scope.** Kept `@eventuras/lectio-docs`. A rename to a
   dedicated scope (own npm org + GitHub org) can happen later if the product
   warrants it — extraction doesn't force it.
