@@ -1,8 +1,9 @@
 /**
  * The framework-agnostic content-source contract.
  *
- * Pure TS — no React, no Node. `collect()` emits a {@link Manifest}; a host
- * builds a {@link ContentSource} from it and injects how bodies are loaded
+ * Pure TS — no React, no Node. A build-time `collect()` step emits a
+ * {@link Manifest} (roadmap Phase 2); a host builds a {@link ContentSource}
+ * from it and injects how bodies are loaded
  * (`fetch` in a SPA, `import.meta.glob` with a bundler, `fs` in Node, an
  * importer in Payload). Lectio never assumes which framework it runs in.
  */
@@ -25,7 +26,10 @@ export interface PageMeta {
   frontmatter: Record<string, unknown>;
 }
 
-/** The serialized output of `collect()` — metadata only, bodies stay on disk. */
+/**
+ * The serialized output of the build-time collector — metadata only, bodies
+ * stay on disk. (Emitting this from `collect()` is roadmap Phase 2.)
+ */
 export interface Manifest {
   /** Manifest schema version, for forward-compatibility. */
   version: 1;

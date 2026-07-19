@@ -11,15 +11,29 @@ import type { ContentSource, CreateContentSourceOptions, PageMeta } from './type
  */
 export function createContentSource({ manifest, loadBody }: CreateContentSourceOptions): ContentSource {
   const pages = manifest.pages;
-  const bySlug = new Map<string, PageMeta>(pages.map((p) => [normalizeSlug(p.slug), p]));
+
+  const bySlug = new Map<string, PageMeta>();
+  for (const page of pages) {
+    const key = normalizeSlug(page.slug);
+    const clash = bySlug.get(key);
+    if (clash) {
+      throw new Error(
+        `Duplicate page slug "${key}" in manifest (from "${clash.slug}" and "${page.slug}"). ` +
+          'Slugs must be unique after normalization.',
+      );
+    }
+    bySlug.set(key, page);
+  }
+
   const tree = buildTree(pages);
 
   return {
+    // Return fresh arrays so callers can't mutate the source's internal state.
     getPages() {
-      return pages;
+      return [...pages];
     },
     getTree() {
-      return tree;
+      return [...tree];
     },
     async getPage(slug) {
       const meta = bySlug.get(normalizeSlug(slug));
