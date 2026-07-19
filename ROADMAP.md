@@ -153,6 +153,16 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - **Own identity / scope.** Kept `@eventuras/lectio-docs`. A rename to a
   dedicated scope (own npm org + GitHub org) can happen later if the product
   warrants it — extraction doesn't force it.
+- **Rendering substrate: plain markdown + components map → MDX later.** Body
+  rendering lives in the React layer, never the core. Start with plain markdown
+  mapped via a `components` map (ratio-ui as one *optional preset*, not hardcoded,
+  so "ratio-ui is a convenience" stays true); upgrade to **MDX** for components
+  authored *inside* content (batteries / reference site). MDX is the substrate
+  under both "own ratio-ui preset" and "adopt Fumadocs" (below). Caveats: MDX runs
+  arbitrary code (trusted authors only) and `.mdx` with imports isn't portable —
+  keep collected lib/README content plain `.md`. `getPage().body` stays the
+  raw-markdown path; MDX is a separate host-side loader, so the content-source
+  contract is unchanged either way.
 - **Optional standalone renderer.** For the pure standalone-site case, Lectio can
   recommend/adapt to an existing renderer (Fumadocs is the best fit — Next.js,
   headless core, native Orama search) rather than building a bespoke theme.
