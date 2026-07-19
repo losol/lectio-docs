@@ -6,7 +6,9 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  packages/lectio-docs:
     dependencies:
       '@orama/orama':
         specifier: ^3.1.18

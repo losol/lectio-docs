@@ -1,0 +1,60 @@
+{
+  "name": "@eventuras/lectio-docs",
+  "version": "0.2.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./search": {
+      "types": "./dist/search/index.d.ts",
+      "import": "./dist/search/index.js"
+    },
+    "./build-index": {
+      "types": "./dist/search/build-index.d.ts",
+      "import": "./dist/search/build-index.js"
+    },
+    "./react": {
+      "types": "./dist/search/react.d.ts",
+      "import": "./dist/search/react.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@orama/orama": "^3.1.18",
+    "@orama/plugin-data-persistence": "^3.1.18",
+    "fast-glob": "^3.3.3"
+  },
+  "peerDependencies": {
+    "@eventuras/ratio-ui": ">=1",
+    "react": "^18 || ^19"
+  },
+  "peerDependenciesMeta": {
+    "@eventuras/ratio-ui": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eventuras/ratio-ui": "^2.13.0",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.14",
+    "@vitejs/plugin-react": "^6.0.3",
+    "react": "^19.2.5",
+    "typescript": "^6.0.2",
+    "vite": "^8.1.0",
+    "vite-plugin-dts": "^5.0.3"
+  }
+}
