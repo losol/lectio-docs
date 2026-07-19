@@ -57,7 +57,7 @@ Monorepo — pnpm workspace (packages/* + apps/* + examples/*)
 
 packages/lectio-docs            @eventuras/lectio-docs — vanilla TS/Node, no React
   .              collect / runCollect / defineDocsConfig   (Node, build-time)
-  ./content      (planned) createContentSource: page tree + getPage — pure TS, agnostic
+  ./content      createContentSource: getTree / getPages / getPage — pure TS, agnostic
   ./search       OramaProvider + types
   ./build-index  buildSearchIndex
 
@@ -117,9 +117,10 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - README, CI (build + typecheck), changesets.
 
 ### Phase 2 — Agnostic content-source API *(the core new capability)*
-- Emit `manifest.json` from `collect()` (page tree + frontmatter + slugs).
-- `./content`: `createContentSource({ manifest, loadBody })` → `getTree` /
-  `getPages` / `getPage`. Pure TS, no React/Next.
+- ✅ `./content`: `createContentSource({ manifest, loadBody })` → `getTree` /
+  `getPages` / `getPage`. Pure TS, no React/Next. Manifest is a flat `pages[]`;
+  the nav tree is derived at runtime, and the host injects `loadBody`.
+- Emit `manifest.json` from `collect()` (frontmatter + slugs + file paths).
 - Validate with `apps/site` (the **React Router** reference site — proves
   agnosticism) plus a Next example under `examples/` — iteration stays atomic
   while the API is still moving.

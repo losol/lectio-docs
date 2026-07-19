@@ -28,6 +28,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: 'src/index.ts',
+        'content/index': 'src/content/index.ts',
         'search/index': 'src/search/index.ts',
         'search/build-index': 'src/search/build-index.ts',
       },
