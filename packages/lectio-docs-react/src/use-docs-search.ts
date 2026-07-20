@@ -16,6 +16,12 @@ export interface UseDocsSearchOptions {
 export interface UseDocsSearchResult {
   /** Latest results for the most recent query */
   results: SearchResult[];
+  /**
+   * Set when the provider threw for the most recent query, cleared on success.
+   * Without this a broken provider — a missing index, a failed fetch — is
+   * indistinguishable from a query that simply has no matches.
+   */
+  error: Error | null;
   /** Feed the query on every keystroke; debounced internally */
   onQueryChange: (query: string) => void;
   /** Navigate to a result URL (uses onNavigate if given, else window.location) */
@@ -33,6 +39,7 @@ export function useDocsSearch({
   onNavigate,
 }: UseDocsSearchOptions): UseDocsSearchResult {
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [error, setError] = useState<Error | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchIdRef = useRef(0);
 
@@ -46,6 +53,7 @@ export function useDocsSearch({
 
       if (!query.trim()) {
         setResults([]);
+        setError(null);
         return;
       }
 
@@ -54,11 +62,18 @@ export function useDocsSearch({
           const hits = await provider.search(query);
           if (requestId === searchIdRef.current) {
             setResults(hits);
+            setError(null);
           }
-        } catch {
-          if (requestId === searchIdRef.current) {
-            setResults([]);
-          }
+        } catch (cause) {
+          // A superseded request has no effects at all — not even a log line.
+          if (requestId !== searchIdRef.current) return;
+
+          // Never let a failing provider masquerade as "no matches": log it and
+          // hand the error back so the host can say something useful.
+          const failure = cause instanceof Error ? cause : new Error(String(cause));
+          console.error('[lectio-docs] search provider failed:', failure);
+          setResults([]);
+          setError(failure);
         }
       }, debounceMs);
     },
@@ -85,5 +100,5 @@ export function useDocsSearch({
     [onNavigate],
   );
 
-  return { results, onQueryChange, onSelect };
+  return { results, error, onQueryChange, onSelect };
 }
