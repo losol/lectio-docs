@@ -1,0 +1,59 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    # Buys a deployment-branch restriction (configured in repo settings) and a
+    # tracked deployment with its URL in the GitHub UI.
+    #
+    # It does NOT isolate the Cloudflare credentials: those are org-level
+    # secrets visible to every public repo in the org, and an environment adds
+    # secrets rather than restricting the ones already in scope.
+    #
+    # Named for what is deployed rather than for a stage, so npm publishing can
+    # get its own environment later without the names colliding.
+    environment:
+      name: site
+      url: https://lectio.losol.no
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm -r build
+
+      # Typecheck here too: this job builds independently of CI, and we would
+      # rather fail the deploy than publish something that does not typecheck.
+      - run: pnpm --filter site typecheck
+
+      # The site is fully prerendered, so this uploads plain static files —
+      # no Workers runtime involved.
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy apps/site/build/client
+            --project-name=lectio-docs
+            --branch=main

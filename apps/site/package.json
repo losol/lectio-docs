@@ -6,14 +6,13 @@
     "collect": "node scripts/collect.mjs",
     "dev": "pnpm collect && react-router dev",
     "build": "pnpm collect && react-router build",
-    "start": "react-router-serve ./build/server/index.js",
+    "preview": "vite preview",
     "typecheck": "react-router typegen && tsc --noEmit"
   },
   "dependencies": {
     "@eventuras/lectio-docs": "workspace:*",
     "@eventuras/lectio-docs-react": "workspace:*",
     "@react-router/node": "^8.2.0",
-    "@react-router/serve": "^8.2.0",
     "isbot": "^5.2.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
