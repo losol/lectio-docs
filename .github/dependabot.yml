@@ -18,6 +18,13 @@ updates:
       interval: monthly
     commit-message:
       prefix: chore
+    ignore:
+      # @types/node majors track the Node runtime, which the workflows pin to
+      # 24. Moving the types past the runtime would typecheck against APIs we
+      # do not actually have. Bump this deliberately when Node itself moves.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     groups:
       dependencies:
         patterns:
