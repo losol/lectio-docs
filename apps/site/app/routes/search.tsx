@@ -12,19 +12,19 @@ import {
 // resolve and run inside React Router framework mode (SSR + client hydration).
 const SAMPLE: SearchResult[] = [
   {
-    url: '/docs/getting-started',
+    url: '/',
+    title: 'Lectio Docs',
+    excerptHtml: 'A headless, framework-agnostic <mark>toolkit</mark> for collecting docs.',
+  },
+  {
+    url: '/getting-started',
     title: 'Getting started',
     excerptHtml: 'Install and <mark>collect</mark> your scattered docs.',
   },
   {
-    url: '/docs/search',
-    title: 'Search',
-    excerptHtml: 'Headless full-text <mark>search</mark> powered by Orama.',
-  },
-  {
-    url: '/docs/architecture',
-    title: 'Architecture',
-    excerptHtml: 'The framework-agnostic content-source <mark>seam</mark>.',
+    url: '/guides/configuration',
+    title: 'Configuration',
+    excerptHtml: 'Sources, targets, slugs and <mark>frontmatter</mark>.',
   },
 ];
 
