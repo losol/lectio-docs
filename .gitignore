@@ -3,5 +3,6 @@ dist
 build
 .react-router
 .lectio
+apps/site/public/search-index.json
 *.tsbuildinfo
 .DS_Store

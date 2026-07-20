@@ -1,48 +1,64 @@
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 
 import { create, insert } from '@orama/orama';
 import { persist } from '@orama/plugin-data-persistence';
 
+import { stripFrontmatter } from '../content/frontmatter.js';
+import type { Manifest } from '../content/types.js';
 import { DOCS_SCHEMA } from './schema.js';
 
 interface BuildSearchIndexOptions {
-  /** Directory containing built HTML files */
-  siteDir: string;
-  /** Output path for the JSON index file */
+  /** Directory holding the collected output: `manifest.json` plus its markdown */
+  contentDir: string;
+  /** Output path for the serialized index JSON */
   outputPath: string;
   /** Optional callback for logging progress */
   log?: (message: string) => void;
 }
 
 /**
- * Build an Orama search index from HTML files in a directory.
+ * Build an Orama search index from a collected manifest and its markdown.
  *
- * Reads all .html files, extracts title and text content,
- * and serializes the index to a JSON file.
+ * Indexing the manifest rather than a framework's built HTML is what makes this
+ * host-agnostic: titles and URLs come straight from the manifest's metadata and
+ * slugs, so React Router, Next and any other host get the same index — no built
+ * site required.
  */
-export async function buildSearchIndex({ siteDir, outputPath, log }: BuildSearchIndexOptions): Promise<number> {
+export async function buildSearchIndex({
+  contentDir,
+  outputPath,
+  log,
+}: BuildSearchIndexOptions): Promise<number> {
   const db = create({ schema: DOCS_SCHEMA });
 
-  const htmlFiles = findHtmlFiles(siteDir);
+  const root = resolve(contentDir);
+
+  const manifest = JSON.parse(
+    readFileSync(join(root, 'manifest.json'), 'utf-8'),
+  ) as Manifest;
+
   let indexed = 0;
 
-  for (const file of htmlFiles) {
-    const html = readFileSync(file, 'utf-8');
-    const title = extractTitle(html);
-    const content = stripHtml(html);
-    const url = htmlPathToUrl(file, siteDir);
+  for (const page of manifest.pages) {
+    // Keep reads inside contentDir: a tampered or untrusted manifest must not
+    // pull arbitrary files into an index that ships as a public asset.
+    const filePath = resolve(root, page.file);
+    if (filePath !== root && !filePath.startsWith(root + sep)) {
+      throw new Error(`Refusing to read outside the content directory: ${page.file}`);
+    }
+
+    const raw = readFileSync(filePath, 'utf-8');
+    const content = markdownToText(stripFrontmatter(raw));
 
     if (!content.trim()) continue;
 
-    insert(db, { title, content, url });
+    insert(db, { title: page.title, content, url: page.slug });
     indexed++;
   }
 
   const snapshot = await persist(db, 'json');
-  const dir = dirname(outputPath);
-  const { mkdirSync } = await import('node:fs');
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, JSON.stringify(snapshot));
 
   log?.(`Indexed ${indexed} pages → ${relative(process.cwd(), outputPath)}`);
@@ -50,51 +66,25 @@ export async function buildSearchIndex({ siteDir, outputPath, log }: BuildSearch
   return indexed;
 }
 
-/** Recursively find all .html files in a directory */
-function findHtmlFiles(dir: string): string[] {
-  const results: string[] = [];
-
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    const stat = statSync(full);
-    if (stat.isDirectory()) {
-      results.push(...findHtmlFiles(full));
-    } else if (entry.endsWith('.html')) {
-      results.push(full);
-    }
-  }
-
-  return results;
-}
-
-/** Extract the <title> or first <h1> from HTML */
-function extractTitle(html: string): string {
-  const titleMatch = /<title[^>]*>([^<]+)<\/title>/i.exec(html);
-  if (titleMatch?.[1]) return titleMatch[1].trim();
-
-  const h1Match = /<h1[^>]*>([^<]+)<\/h1>/i.exec(html);
-  if (h1Match?.[1]) return h1Match[1].trim();
-
-  return '';
-}
-
-/** Strip HTML tags and collapse whitespace to get searchable text */
-function stripHtml(html: string): string {
-  return html
-    .replaceAll(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replaceAll(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replaceAll(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-    .replaceAll(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
-    .replaceAll(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+/**
+ * Reduce markdown to plain prose so the index matches words, not syntax.
+ * Link text is kept, code blocks and URLs are dropped.
+ */
+function markdownToText(markdown: string): string {
+  return markdown
+    .replaceAll(/```[\s\S]*?```/g, ' ')
+    .replaceAll(/~~~[\s\S]*?~~~/g, ' ')
+    .replaceAll(/`([^`]*)`/g, '$1')
+    .replaceAll(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replaceAll(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replaceAll(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replaceAll(/^\s{0,3}>\s?/gm, '')
+    .replaceAll(/^\s*[-*+]\s+/gm, '')
+    .replaceAll(/^\s*\d+\.\s+/gm, '')
+    .replaceAll(/^\s*\|?[\s:|-]{4,}\|?\s*$/gm, ' ')
+    .replaceAll(/[|*_~]/g, ' ')
     .replaceAll(/<[^>]+>/g, ' ')
     .replaceAll(/&[a-z]+;/gi, ' ')
     .replaceAll(/\s+/g, ' ')
     .trim();
-}
-
-/** Convert an HTML file path to a URL path: /site/foo/bar/index.html → /foo/bar */
-function htmlPathToUrl(file: string, siteDir: string): string {
-  let url = '/' + relative(siteDir, file).replaceAll('\\', '/');
-  url = url.replace(/\/index\.html$/, '').replace(/\.html$/, '');
-  return url || '/';
 }
