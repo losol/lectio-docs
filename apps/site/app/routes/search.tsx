@@ -15,7 +15,7 @@ export default function SearchPage() {
   // a static asset; Orama restores it in the browser on the first query.
   const provider = useMemo(() => new OramaProvider('/search-index.json'), []);
 
-  const { results, onQueryChange, onSelect } = useDocsSearch({
+  const { results, error, onQueryChange, onSelect } = useDocsSearch({
     provider,
     onNavigate: (url) => navigate(url),
   });
@@ -81,8 +81,15 @@ export default function SearchPage() {
         ))}
       </ul>
 
-      {query.trim() !== '' && results.length === 0 && (
-        <p style={{ color: '#888' }}>No matches.</p>
+      {error ? (
+        <p
+          role="alert"
+          style={{ color: '#b00', border: '1px solid #f0c0c0', borderRadius: 6, padding: '0.6rem 0.75rem' }}
+        >
+          {error.message ? `Search is unavailable: ${error.message}` : 'Search is unavailable.'}
+        </p>
+      ) : (
+        query.trim() !== '' && results.length === 0 && <p style={{ color: '#888' }}>No matches.</p>
       )}
     </main>
   );
