@@ -10,6 +10,9 @@ importers:
 
   apps/site:
     dependencies:
+      '@eventuras/lectio-docs':
+        specifier: workspace:*
+        version: link:../../packages/lectio-docs
       '@eventuras/lectio-docs-react':
         specifier: workspace:*
         version: link:../../packages/lectio-docs-react
