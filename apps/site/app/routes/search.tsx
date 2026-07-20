@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   useDocsSearch,
   type SearchProvider,
@@ -37,10 +37,10 @@ const sampleProvider: SearchProvider = {
 };
 
 export function meta() {
-  return [{ title: 'Lectio Docs — reference site (stub)' }];
+  return [{ title: 'Search (demo) — Lectio Docs' }];
 }
 
-export default function Home() {
+export default function SearchDemo() {
   const navigate = useNavigate();
   const provider = useMemo(() => sampleProvider, []);
   const { results, onQueryChange, onSelect } = useDocsSearch({
@@ -59,10 +59,15 @@ export default function Home() {
         lineHeight: 1.5,
       }}
     >
-      <h1 style={{ marginBottom: '0.25rem' }}>Lectio Docs</h1>
+      <h1 style={{ marginBottom: '0.25rem' }}>Search (demo)</h1>
       <p style={{ color: '#666', marginTop: 0 }}>
-        Reference site — workspace stub. Drives <code>useDocsSearch</code> from{' '}
-        <code>@eventuras/lectio-docs-react</code> against a sample index.
+        Drives <code>useDocsSearch</code> from <code>@eventuras/lectio-docs-react</code>{' '}
+        against a <strong>sample</strong> index — not the collected docs yet. Real search
+        over the manifest lands with <code>build-index</code>, and then moves into the
+        site chrome so it is available on every page.
+      </p>
+      <p style={{ marginTop: 0 }}>
+        <Link to="/">← Back to docs</Link>
       </p>
       <input
         type="search"

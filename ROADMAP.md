@@ -66,7 +66,10 @@ packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
                  type-only coupling to the core (SearchProvider / SearchResult)
 
 apps/site                       React Router (framework mode, v8) reference site
-  consumes @eventuras/lectio-docs-react; the future dev-docs replacement (Phase 4)
+  collects docs/ -> .lectio/, serves them at the site root from ./content
+  (fs loadBody); the future dev-docs replacement (Phase 4)
+
+docs/                           this repo's own documentation — the collector's source
 ```
 
 The agnostic seam: `collect()` emits a `manifest.json`; the runtime
@@ -122,9 +125,11 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   the nav tree is derived at runtime, and the host injects `loadBody`.
 - ✅ Emit `manifest.json` from `collect()` — a flat `pages[]` of `PageMeta`
   (slug, title, description, source, `file`, section, frontmatter).
-- Validate with `apps/site` (the **React Router** reference site — proves
-  agnosticism) plus a Next example under `examples/` — iteration stays atomic
-  while the API is still moving.
+- ✅ Validate with `apps/site` (the **React Router** reference site — proves
+  agnosticism): repo-root `docs/` → `collect()` → `.lectio/manifest.json` →
+  `createContentSource` with an `fs` `loadBody`, served at the **site root**
+  (slug == URL) with nav from `getTree`. A Next example under `examples/` is
+  still pending.
 - Make `build-index` index the manifest/markdown instead of Next's built HTML
   (the one remaining Next-ism), so RR and other hosts get search too.
 
@@ -137,6 +142,8 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - Ship ready-made components and a **reference site** (a theme, or a
   `create-lectio-docs` scaffolder) — enough that the eventuras developer docs are
   produced by Lectio, so the hand-rolled `dev-docs` app is no longer needed.
+- Move search into the site chrome so it is available on **every page**,
+  replacing the standalone `/search` demo route.
 - Historia integration: `collect()` → a Payload collection (`plugin-nested-docs`
   for hierarchy, `plugin-search` for search).
 
