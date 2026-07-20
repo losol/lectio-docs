@@ -59,7 +59,7 @@ packages/lectio-docs            @eventuras/lectio-docs — vanilla TS/Node, no R
   .              collect / runCollect / defineDocsConfig   (Node, build-time)
   ./content      createContentSource: getTree / getPages / getPage — pure TS, agnostic
   ./search       OramaProvider + types
-  ./build-index  buildSearchIndex
+  ./build-index  buildSearchIndex — Orama index built from the manifest
 
 packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
   .              useDocsSearch (headless hook) + <Search> (ratio-ui, optional peer)
@@ -67,7 +67,8 @@ packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
 
 apps/site                       React Router (framework mode, v8) reference site
   collects docs/ -> .lectio/, serves them at the site root from ./content
-  (fs loadBody); the future dev-docs replacement (Phase 4)
+  (fs loadBody), plus Orama search at /search; the future dev-docs
+  replacement (Phase 4)
 
 docs/                           this repo's own documentation — the collector's source
 ```
@@ -130,8 +131,10 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   `createContentSource` with an `fs` `loadBody`, served at the **site root**
   (slug == URL) with nav from `getTree`. A Next example under `examples/` is
   still pending.
-- Make `build-index` index the manifest/markdown instead of Next's built HTML
-  (the one remaining Next-ism), so RR and other hosts get search too.
+- ✅ `build-index` indexes the manifest + collected markdown instead of a
+  framework's built HTML (the last Next-ism). Titles and URLs come from the
+  manifest, so every host gets the same index — no built site required.
+  `apps/site` ships it at `/search-index.json` and queries it via `OramaProvider`.
 
 ### Phase 3 — Publish & migrate eventuras
 - Publish `@eventuras/lectio-docs` (npm or GitHub Packages).

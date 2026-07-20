@@ -54,7 +54,7 @@ export default function DocsPage() {
         <Nav nodes={tree} />
         <p style={{ marginTop: '1.5rem', fontSize: '0.85rem' }}>
           <Link to="/search" style={{ color: '#888' }}>
-            Search (demo)
+            Search
           </Link>
         </p>
       </aside>

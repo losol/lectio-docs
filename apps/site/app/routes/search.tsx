@@ -1,48 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import {
-  useDocsSearch,
-  type SearchProvider,
-  type SearchResult,
-} from '@eventuras/lectio-docs-react';
 
-// Trivial in-memory provider — a stand-in until the collector-backed Orama
-// index (roadmap Phase 2, the `./content` + `build-index` seam) is wired in.
-// Its only job here is to prove the workspace link and the `/react` subpath
-// resolve and run inside React Router framework mode (SSR + client hydration).
-const SAMPLE: SearchResult[] = [
-  {
-    url: '/',
-    title: 'Lectio Docs',
-    excerptHtml: 'A headless, framework-agnostic <mark>toolkit</mark> for collecting docs.',
-  },
-  {
-    url: '/getting-started',
-    title: 'Getting started',
-    excerptHtml: 'Install and <mark>collect</mark> your scattered docs.',
-  },
-  {
-    url: '/guides/configuration',
-    title: 'Configuration',
-    excerptHtml: 'Sources, targets, slugs and <mark>frontmatter</mark>.',
-  },
-];
-
-const sampleProvider: SearchProvider = {
-  async init() {},
-  async search(query) {
-    const q = query.trim().toLowerCase();
-    return SAMPLE.filter((r) => r.title.toLowerCase().includes(q));
-  },
-};
+import { OramaProvider } from '@eventuras/lectio-docs/search';
+import { useDocsSearch } from '@eventuras/lectio-docs-react';
 
 export function meta() {
-  return [{ title: 'Search (demo) — Lectio Docs' }];
+  return [{ title: 'Search — Lectio Docs' }];
 }
 
-export default function SearchDemo() {
+export default function SearchPage() {
   const navigate = useNavigate();
-  const provider = useMemo(() => sampleProvider, []);
+
+  // The index is built from the collected manifest at build time and shipped as
+  // a static asset; Orama restores it in the browser on the first query.
+  const provider = useMemo(() => new OramaProvider('/search-index.json'), []);
+
   const { results, onQueryChange, onSelect } = useDocsSearch({
     provider,
     onNavigate: (url) => navigate(url),
@@ -59,20 +31,19 @@ export default function SearchDemo() {
         lineHeight: 1.5,
       }}
     >
-      <h1 style={{ marginBottom: '0.25rem' }}>Search (demo)</h1>
+      <h1 style={{ marginBottom: '0.25rem' }}>Search</h1>
       <p style={{ color: '#666', marginTop: 0 }}>
-        Drives <code>useDocsSearch</code> from <code>@eventuras/lectio-docs-react</code>{' '}
-        against a <strong>sample</strong> index — not the collected docs yet. Real search
-        over the manifest lands with <code>build-index</code>, and then moves into the
-        site chrome so it is available on every page.
+        Full-text search over the collected docs — an Orama index built from the
+        manifest, queried through <code>useDocsSearch</code>.
       </p>
       <p style={{ marginTop: 0 }}>
         <Link to="/">← Back to docs</Link>
       </p>
+
       <input
         type="search"
-        aria-label="Search the sample index"
-        placeholder="Search the sample index…"
+        aria-label="Search the docs"
+        placeholder="Search the docs…"
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -80,6 +51,7 @@ export default function SearchDemo() {
         }}
         style={{ width: '100%', padding: '0.6rem', fontSize: '1rem', boxSizing: 'border-box' }}
       />
+
       <ul style={{ listStyle: 'none', padding: 0 }}>
         {results.map((r) => (
           <li key={r.url} style={{ margin: '0.75rem 0' }}>
@@ -101,14 +73,17 @@ export default function SearchDemo() {
               <strong>{r.title}</strong>
               <span
                 style={{ display: 'block', color: '#666' }}
-                // excerptHtml is sanitized upstream (only <mark> tags) — mirrors
-                // how the ratio-ui <Search> component renders highlights.
+                // excerptHtml is sanitized upstream (only <mark> tags).
                 dangerouslySetInnerHTML={{ __html: r.excerptHtml }}
               />
             </button>
           </li>
         ))}
       </ul>
+
+      {query.trim() !== '' && results.length === 0 && (
+        <p style={{ color: '#888' }}>No matches.</p>
+      )}
     </main>
   );
 }
