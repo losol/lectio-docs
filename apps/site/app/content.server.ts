@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 import {
   createContentSource,
@@ -28,7 +28,16 @@ export function getContentSource(): ContentSource {
 
   cached = createContentSource({
     manifest,
-    loadBody: (page) => readFileSync(join(CONTENT_DIR, page.file), 'utf-8'),
+    loadBody: (page) => {
+      // The manifest is our own build artifact today, but keep the read
+      // contained anyway: a manifest from elsewhere (a remote repo source, a
+      // tampered build output) must not be able to escape CONTENT_DIR.
+      const filePath = resolve(CONTENT_DIR, page.file);
+      if (filePath !== CONTENT_DIR && !filePath.startsWith(CONTENT_DIR + sep)) {
+        throw new Error(`Refusing to read outside the content directory: ${page.file}`);
+      }
+      return readFileSync(filePath, 'utf-8');
+    },
   });
 
   return cached;
