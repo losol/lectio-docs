@@ -57,8 +57,9 @@ export async function buildSearchIndex({
   }
 
   // Orama's own `save()` — see OramaProvider for why the persistence plugin is
-  // avoided. Emits a plain JSON object, so the file is single-encoded.
-  const snapshot = await save(db);
+  // avoided. Synchronous, and emits a plain JSON object, so the file ends up
+  // single-encoded.
+  const snapshot = save(db);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, JSON.stringify(snapshot));
 
