@@ -1,8 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
-import { create, insert } from '@orama/orama';
-import { persist } from '@orama/plugin-data-persistence';
+import { create, insert, save } from '@orama/orama';
 
 import { stripFrontmatter } from '../content/frontmatter.js';
 import type { Manifest } from '../content/types.js';
@@ -57,7 +56,9 @@ export async function buildSearchIndex({
     indexed++;
   }
 
-  const snapshot = await persist(db, 'json');
+  // Orama's own `save()` — see OramaProvider for why the persistence plugin is
+  // avoided. Emits a plain JSON object, so the file is single-encoded.
+  const snapshot = await save(db);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, JSON.stringify(snapshot));
 
