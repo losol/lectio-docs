@@ -68,8 +68,8 @@ packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
 apps/site                       React Router (framework mode, v8) reference site
   collects docs/ -> .lectio/, serves them at the site root from ./content
   (fs loadBody), plus Orama search at /search. Prerendered to static HTML
-  (ssr: false) and deployed to Cloudflare Pages; the future dev-docs
-  replacement (Phase 4)
+  (ssr: false) and deployed to Cloudflare as a Worker with static assets;
+  the future dev-docs replacement (Phase 4)
 
 docs/                           this repo's own documentation — the collector's source
 ```
@@ -122,9 +122,10 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - ✅ CI — build + typecheck across the workspace on every PR and push to `main`.
   The site build runs `collect`, so CI exercises the whole pipeline: collect →
   manifest → search index → prerender.
-- ✅ CD — `apps/site` prerenders to static HTML and deploys to Cloudflare Pages
-  via `wrangler`. *Pending:* Cloudflare secrets and the `lectio.losol.no`
-  custom domain.
+- ✅ CD — `apps/site` prerenders to static HTML and deploys to Cloudflare via
+  `wrangler` as a Worker with static assets (not Pages), so adding server-side
+  logic later is a `main` entry rather than a platform migration.
+  *Pending:* the `lectio.losol.no` custom domain.
 - README, changesets.
 
 ### Phase 2 — Agnostic content-source API *(the core new capability)*

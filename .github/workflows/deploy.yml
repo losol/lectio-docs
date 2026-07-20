@@ -52,15 +52,18 @@ jobs:
       # action installs wrangler with `pnpm add`, which pnpm refuses at a
       # workspace root without `-w`, so it never got as far as deploying.
       # Calling wrangler ourselves also drops a third-party action and lets us
-      # pin the version instead of accepting the action's default (3.90.0).
+      # pin the version rather than accept the action's default (3.90.0).
       #
-      # The site is fully prerendered, so this uploads plain static files —
-      # no Workers runtime involved.
+      # Deploys as a Worker with static assets rather than to Pages: the same
+      # static upload today, but adding server-side logic later becomes a
+      # `main` entry instead of a platform migration.
       - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/site
         run: >-
-          pnpm dlx wrangler@4.112.0 pages deploy apps/site/build/client
-          --project-name=lectio-docs
-          --branch=main
+          pnpm dlx wrangler@4.112.0 deploy
+          --name lectio-docs
+          --compatibility-date 2026-07-20
+          --assets ./build/client
