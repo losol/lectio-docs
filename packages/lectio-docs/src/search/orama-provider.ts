@@ -1,10 +1,16 @@
+import { DOCS_SCHEMA } from './schema.js';
 import type { SearchProvider, SearchResult } from './types.js';
 
 /**
  * Search provider backed by Orama.
  *
- * In the browser it fetches a pre-built JSON index and restores it.
+ * In the browser it fetches a pre-built JSON index and loads it.
  * Works for both static docs sites and dynamic web apps.
+ *
+ * Deliberately uses Orama's own `load()` rather than
+ * `@orama/plugin-data-persistence`: for the JSON format that plugin is only a
+ * thin wrapper over `save`/`load`, but it imports `dpack` at module scope, which
+ * extends Node's `stream.Transform` and therefore explodes in a browser bundle.
  */
 export class OramaProvider implements SearchProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Orama's deep generics cause TS2589
@@ -29,7 +35,7 @@ export class OramaProvider implements SearchProvider {
   }
 
   private async doInit(): Promise<void> {
-    const { restore } = await import('@orama/plugin-data-persistence');
+    const { create, load } = await import('@orama/orama');
 
     const response = await fetch(this.indexPath);
     if (!response.ok) {
@@ -37,7 +43,9 @@ export class OramaProvider implements SearchProvider {
     }
 
     const snapshot = await response.json();
-    this.db = await restore('json', snapshot);
+    const db = create({ schema: DOCS_SCHEMA });
+    load(db, snapshot);
+    this.db = db;
   }
 
   async search(query: string): Promise<SearchResult[]> {
