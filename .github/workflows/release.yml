@@ -8,15 +8,25 @@ concurrency:
   group: release
   cancel-in-progress: false
 
-# Needs to write the version branch and open the PR that carries it.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write # version branch and release tags
+  pull-requests: write # open the version PR
+  id-token: write # OIDC for npm trusted publishing
 
 jobs:
-  version:
-    name: Version packages
+  release:
+    name: Version or publish
     runs-on: ubuntu-latest
+    # npm trusted publishing — no NPM_TOKEN anywhere. With no token set, the
+    # changesets action skips writing an .npmrc and pnpm exchanges this job's
+    # OIDC token for a short-lived credential; provenance comes with it.
+    #
+    # One-time bootstrap per NEW package: npm cannot configure a trusted
+    # publisher for a name that does not exist yet, so a package's first
+    # release is published manually, then its trusted publisher is set to this
+    # repo + release.yml (+ this environment). The environment also carries the
+    # main-only deployment branch restriction — set in repo settings.
+    environment: npm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,16 +42,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Collects pending changesets into a "version packages" PR: bumps
-      # versions and writes CHANGELOG entries. Merging that PR is what makes a
-      # release real.
+      # Pending changesets become a "version packages" PR. Once that PR is
+      # merged there is nothing pending, and the same step publishes instead:
+      # topologically ordered, tagged per package, and — since
+      # createGithubReleases defaults to true — released on GitHub as well.
       #
-      # No `publish:` step yet. Both packages are still private, so there is
-      # nothing to push to a registry until Phase 3 decides npm vs GitHub
-      # Packages and flips them public.
+      # `release` builds before publishing, per the action's own guidance:
+      # changeset publish ships whatever is on disk. No registry-url on
+      # setup-node and no token in env — with NPM_TOKEN absent the action
+      # leaves .npmrc alone and publishing rides on OIDC.
       - uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: pnpm changeset:version
+          publish: pnpm release
           commit: "chore: version packages"
           title: "chore: version packages"
         env:

@@ -1,8 +1,20 @@
 {
   "name": "@eventuras/lectio-docs-react",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "React bindings for @eventuras/lectio-docs: a headless search hook, plus an optional ratio-ui search component.",
+  "keywords": [
+    "documentation",
+    "docs",
+    "react",
+    "search",
+    "orama"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/losol/lectio-docs.git",
+    "directory": "packages/lectio-docs-react"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -15,6 +27,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "vite build"
   },

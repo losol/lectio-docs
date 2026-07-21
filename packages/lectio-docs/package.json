@@ -1,8 +1,21 @@
 {
   "name": "@eventuras/lectio-docs",
   "version": "0.2.0",
-  "private": true,
+  "description": "Headless, framework-agnostic toolkit for collecting documentation scattered across a repository into one content source, with full-text search.",
+  "keywords": [
+    "documentation",
+    "docs",
+    "monorepo",
+    "markdown",
+    "search",
+    "orama"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/losol/lectio-docs.git",
+    "directory": "packages/lectio-docs"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -27,6 +40,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "vite build"
   },
