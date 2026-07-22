@@ -1,6 +1,6 @@
 {
   "name": "@eventuras/lectio-docs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Headless, framework-agnostic toolkit for collecting documentation scattered across a repository into one content source, with full-text search.",
   "keywords": [
     "documentation",
