@@ -32,14 +32,24 @@ function toItems(results: SearchResult[]): CommandPaletteItem[] {
  * same search logic with a different design system.
  */
 export function Search({ provider, placeholder = 'Search...', onNavigate }: Readonly<SearchProps>) {
-  const { results, onQueryChange, onSelect } = useDocsSearch({ provider, onNavigate });
+  const { results, error, onQueryChange, onSelect } = useDocsSearch({ provider, onNavigate });
 
   return (
-    <CommandPalette
-      items={toItems(results)}
-      onSelect={(item) => onSelect(item.id)}
-      onQueryChange={onQueryChange}
-      placeholder={placeholder}
-    />
+    <>
+      <CommandPalette
+        items={toItems(results)}
+        onSelect={(item) => onSelect(item.id)}
+        onQueryChange={onQueryChange}
+        placeholder={placeholder}
+      />
+      {/* Surface provider failures so a broken index is distinguishable from a
+          query with no matches — same contract as the hook's error field. The
+          message makes failures diagnosable without opening the console. */}
+      {error && (
+        <p role="alert">
+          {error.message ? `Search is unavailable: ${error.message}` : 'Search is unavailable.'}
+        </p>
+      )}
+    </>
   );
 }
