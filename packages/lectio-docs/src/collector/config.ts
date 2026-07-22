@@ -21,6 +21,19 @@ export interface DocsConfig {
 
   /** Documentation sources to collect */
   sources: DocSource[];
+
+  /**
+   * Template for "edit this page" links, resolved per page at collect time
+   * with `{path}` replaced by the source file's repo-relative path. A template
+   * rather than repo+branch fields keeps the collector forge-agnostic —
+   * GitHub, GitLab and Gitea all shape their edit URLs differently:
+   *
+   * - GitHub: `https://github.com/org/repo/edit/main/{path}`
+   * - GitLab: `https://gitlab.com/org/repo/-/edit/main/{path}`
+   *
+   * Omit it and pages simply carry no `editUrl`.
+   */
+  editUrl?: string;
 }
 
 export function defineDocsConfig(config: DocsConfig): DocsConfig {

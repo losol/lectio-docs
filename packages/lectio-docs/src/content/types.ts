@@ -18,6 +18,12 @@ export interface PageMeta {
   description?: string;
   /** Repo-relative path to the original source file (provenance / edit links). */
   source: string;
+  /**
+   * Resolved "edit this page" link for the original source file, when the
+   * collector was configured with an `editUrl` template. Resolved at collect
+   * time because only the collector knows which repo a page came from.
+   */
+  editUrl?: string;
   /** Output-relative path to the collected file — the key `loadBody` receives. */
   file: string;
   /** Section this page belongs to, e.g. "/libraries" (the source's target). */
