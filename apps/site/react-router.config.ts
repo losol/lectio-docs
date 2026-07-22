@@ -20,6 +20,6 @@ export default {
       pages: Array<{ slug: string; }>;
     };
 
-    return [...manifest.pages.map((page) => page.slug), '/search'];
+    return manifest.pages.map((page) => page.slug);
   },
 } satisfies Config;
