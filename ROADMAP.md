@@ -49,6 +49,7 @@ config-only or is retired.
 | React Router app (e.g. *ignis*, external) | content tree + `getPage` + `useDocsSearch` | app renders in its own routes; Orama search |
 | Historia (Payload + Next CMS) | `collect()` → import docs as a Payload collection | Payload owns storage/admin/**search** (`plugin-search`) |
 | Standalone docs site | all of the above + a reference theme | this is what **replaces `dev-docs`** |
+| "Just give me a site" | a ready-made site from one script — scaffolder first, possibly a packaged CLI later | Lectio's reference layout, config-only |
 
 ## Architecture
 
@@ -168,10 +169,17 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 
 ## Deferred decisions
 
-- **Positioning: "toolkit, not SSG" → possibly "toolkit *with* SSG".** The
-  headless core is identical either way; only how much we invest in / market the
-  `apps/site` reference site differs. Explicitly *not* decided — kept open by
-  holding the seam: render/theme opinions stay in `apps/site`, never in the core.
+- **Ready-made site as an *additional* offering (not a repositioning).** The
+  embed paths stay primary; "run one script, get a site" is a fourth consumer
+  row beside them. Sequence: publish → migrate eventuras (the migration is the
+  first hand-run scaffolding, and empirically reveals what must become
+  parameters — today hardcoded in `apps/site`: wordmark, GitHub link, editUrl,
+  source globs, deploy name) → `create-lectio-docs` scaffolder from that
+  parameter list. A *packaged* CLI site (config-only, updates via version
+  bumps) stays open behind it — it needs a stable theming surface, which is
+  the hard part; decide once scaffolder users show whether they want
+  updatability more than ownership. The seam discipline is unchanged either
+  way: render/theme opinions stay in the site layer, never in the core.
 - **peer vs dep for the core in `@eventuras/lectio-docs-react`.** Currently a
   plain `dependency` (`workspace:*`) for zero friction. At publish time, weigh a
   `peer` instead so consumers using both packages share one core version.
