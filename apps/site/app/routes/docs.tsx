@@ -4,11 +4,16 @@ import { Link, useLoaderData } from 'react-router';
 import type { TreeNode } from '@eventuras/lectio-docs/content';
 import { MarkdownContent, extractHeadings, type MarkdownComponents } from '@eventuras/markdown';
 import { Heading } from '@eventuras/ratio-ui/core/Heading';
-import { NavTree, type NavTreeGroup, type NavTreeItem } from '@eventuras/ratio-ui/core/NavTree';
+import { NavTree } from '@eventuras/ratio-ui/core/NavTree';
 import { TableOfContents } from '@eventuras/ratio-ui/core/TableOfContents';
 import { getTextContent, slugify } from '@eventuras/ratio-ui/utils';
 
 import { getContentSource } from '../content.server';
+import docsStylesheet from './docs.css?url';
+
+export function links() {
+  return [{ rel: 'stylesheet', href: docsStylesheet }];
+}
 
 export async function loader({ params }: { params: Record<string, string | undefined> }) {
   const source = getContentSource();
@@ -20,7 +25,27 @@ export async function loader({ params }: { params: Record<string, string | undef
   const page = await source.getPage(slug);
   if (!page) throw new Response(`No document for "${slug}"`, { status: 404 });
 
-  return { page, tree: source.getTree(), slug };
+  // navGroups is computed here (plain, serializable data) rather than in the
+  // component so the site header can pick it up via useMatches and render the
+  // same tree in its mobile Navbar.Collapse.
+  return { page, navGroups: toNavGroups(source.getTree()), slug };
+}
+
+/**
+ * Serializable shape of the nav tree — a plain-strings subset of ratio-ui's
+ * NavTreeGroup (whose `title: ReactNode` doesn't survive React Router's
+ * loader-serialization typing). Structurally assignable to what NavTree takes,
+ * and shared with the site header, which reads it back via useMatches.
+ */
+export interface DocsNavItem {
+  title: string;
+  href?: string;
+  id?: string;
+  children?: DocsNavItem[];
+}
+export interface DocsNavGroup {
+  label?: string;
+  items: DocsNavItem[];
 }
 
 /**
@@ -29,8 +54,8 @@ export async function loader({ params }: { params: Record<string, string | undef
  * uppercase eyebrow — the grouped-sidebar look from the design sketch, derived
  * from the manifest rather than hand-maintained.
  */
-function toNavGroups(tree: TreeNode[]): NavTreeGroup[] {
-  const toItem = (node: TreeNode): NavTreeItem => ({
+function toNavGroups(tree: TreeNode[]): DocsNavGroup[] {
+  const toItem = (node: TreeNode): DocsNavItem => ({
     title: node.title,
     ...(node.slug ? { href: node.slug } : { id: node.title }),
     ...(node.children.length > 0 ? { children: node.children.map(toItem) } : {}),
@@ -58,9 +83,8 @@ function NavLink({ href, ...rest }: { href: string; children: React.ReactNode })
 }
 
 export default function DocsPage() {
-  const { page, tree, slug } = useLoaderData<typeof loader>();
+  const { page, navGroups, slug } = useLoaderData<typeof loader>();
 
-  const navGroups = useMemo(() => toNavGroups(tree), [tree]);
   const headings = useMemo(() => extractHeadings(page.body), [page.body]);
 
   // The only override left: anchor ids on h2/h3, slugged with ratio-ui's own
@@ -84,45 +108,13 @@ export default function DocsPage() {
   );
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        maxWidth: 1400,
-        margin: '0 auto',
-        width: '100%',
-        fontFamily: 'var(--font-body)',
-        color: 'var(--text)',
-      }}
-    >
-      <aside
-        style={{
-          position: 'sticky',
-          top: 60,
-          flexShrink: 0,
-          width: 262,
-          maxHeight: 'calc(100vh - 60px)',
-          overflowY: 'auto',
-          padding: '26px 16px 40px 24px',
-          borderRight: '1px solid var(--border-1)',
-        }}
-      >
+    <div className="docs-shell">
+      <aside className="docs-sidebar">
         <NavTree groups={navGroups} currentPath={slug} LinkComponent={NavLink} aria-label="Documentation" />
       </aside>
 
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 40,
-          maxWidth: 1040,
-          margin: '0 auto',
-          padding: '40px 40px 80px',
-        }}
-      >
-        <main style={{ flex: 1, minWidth: 0 }}>
+      <div className="docs-content-wrap">
+        <main className="docs-main">
           <MarkdownContent
             markdown={page.body}
             allowExternalLinks
@@ -164,7 +156,7 @@ export default function DocsPage() {
         </main>
 
         {headings.length > 0 && (
-          <aside style={{ flexShrink: 0, width: 190, position: 'sticky', top: 86, alignSelf: 'flex-start' }}>
+          <aside className="docs-toc">
             <TableOfContents headings={headings} />
           </aside>
         )}

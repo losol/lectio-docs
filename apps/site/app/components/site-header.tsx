@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useMatches, useNavigate } from 'react-router';
 
 import { OramaProvider } from '@eventuras/lectio-docs/search';
 import { Search } from '@eventuras/lectio-docs-react';
 import { Navbar } from '@eventuras/ratio-ui/core/Navbar';
+import { NavTree } from '@eventuras/ratio-ui/core/NavTree';
 import { ThemeToggle } from '@eventuras/ratio-ui/core/ThemeToggle';
+
+import type { DocsNavGroup } from '../routes/docs';
 
 /**
  * Site header on ratio-ui's Navbar (sticky app-header form: fluid + elevated —
  * elevation, never borders). The search zone hosts the lectio <Search>
  * CommandPalette, which brings its own trigger and the global ⌘K shortcut.
+ *
+ * On narrow screens the docs nav collapses into the navbar's own
+ * Toggle/Collapse pair (the "pocket library" pattern): a burger that folds the
+ * NavTree out under the bar. The nav data comes from the docs route's loader
+ * via useMatches, so the header stays route-agnostic. The Navbar is keyed on
+ * the pathname because the disclosure state is internal with no controlled
+ * API — remounting on navigation is what closes the panel after a link is
+ * followed.
  *
  * Theme state lives on <html data-theme> (set before first paint by the
  * blocking script in root.tsx). The toggle reads it after mount — `null`
@@ -18,11 +29,19 @@ import { ThemeToggle } from '@eventuras/ratio-ui/core/ThemeToggle';
  */
 export function SiteHeader() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
 
   // The index is built from the collected manifest at build time and shipped
   // as a static asset; Orama restores it in the browser on the first query.
   const provider = useMemo(() => new OramaProvider('/search-index.json'), []);
+
+  // Nav tree from whichever active route provided it (the docs loader).
+  // UIMatch carries the loader's return as `loaderData` in React Router v8.
+  const matches = useMatches();
+  const docsData = matches.find(
+    (m) => m.loaderData && typeof m.loaderData === 'object' && 'navGroups' in m.loaderData,
+  )?.loaderData as { navGroups: DocsNavGroup[]; slug: string } | undefined;
 
   useEffect(() => {
     const current = document.documentElement.getAttribute('data-theme');
@@ -42,7 +61,7 @@ export function SiteHeader() {
   };
 
   return (
-    <Navbar sticky elevated fluid>
+    <Navbar key={pathname} sticky elevated fluid>
       <Navbar.Brand>
         <Link
           to="/"
@@ -99,7 +118,32 @@ export function SiteHeader() {
           </svg>
           GitHub
         </a>
+        {docsData && (
+          /* Wrapper owns responsive visibility (display: none / contents in
+             docs.css) so we never fight the component's own display classes. */
+          <span className="site-nav-toggle">
+            <Navbar.Toggle controls="docs-nav" ariaLabel="Documentation menu" />
+          </span>
+        )}
       </Navbar.Actions>
+
+      {docsData && (
+        <div className="site-nav-collapse">
+          <Navbar.Collapse id="docs-nav">
+            <NavTree
+              groups={docsData.navGroups}
+              currentPath={docsData.slug}
+              LinkComponent={NavCollapseLink}
+              aria-label="Documentation"
+            />
+          </Navbar.Collapse>
+        </div>
+      )}
     </Navbar>
   );
+}
+
+/** React Router adapter for NavTree — forwards active/indent/aria props. */
+function NavCollapseLink({ href, ...rest }: { href: string; children: React.ReactNode }) {
+  return <Link to={href} {...rest} />;
 }
