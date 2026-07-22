@@ -1,6 +1,12 @@
+import { useMemo } from 'react';
 import { Link, useLoaderData } from 'react-router';
 
 import type { TreeNode } from '@eventuras/lectio-docs/content';
+import { MarkdownContent, extractHeadings, type MarkdownComponents } from '@eventuras/markdown';
+import { Heading } from '@eventuras/ratio-ui/core/Heading';
+import { NavTree, type NavTreeGroup, type NavTreeItem } from '@eventuras/ratio-ui/core/NavTree';
+import { TableOfContents } from '@eventuras/ratio-ui/core/TableOfContents';
+import { getTextContent, slugify } from '@eventuras/ratio-ui/utils';
 
 import { getContentSource } from '../content.server';
 
@@ -14,71 +20,155 @@ export async function loader({ params }: { params: Record<string, string | undef
   const page = await source.getPage(slug);
   if (!page) throw new Response(`No document for "${slug}"`, { status: 404 });
 
-  return { page, tree: source.getTree() };
+  return { page, tree: source.getTree(), slug };
 }
 
-function Nav({ nodes }: { nodes: TreeNode[] }) {
-  return (
-    <ul style={{ listStyle: 'none', paddingLeft: '0.9rem', margin: 0 }}>
-      {nodes.map((node) => (
-        <li key={node.slug ?? node.title} style={{ margin: '0.35rem 0' }}>
-          {node.slug ? (
-            <Link to={node.slug}>{node.title}</Link>
-          ) : (
-            <span style={{ color: '#888' }}>{node.title}</span>
-          )}
-          {node.children.length > 0 && <Nav nodes={node.children} />}
-        </li>
-      ))}
-    </ul>
-  );
+/**
+ * Content tree → NavTree groups: root-level pages form the first (unlabelled)
+ * group, and each bare section becomes its own group with its title as the
+ * uppercase eyebrow — the grouped-sidebar look from the design sketch, derived
+ * from the manifest rather than hand-maintained.
+ */
+function toNavGroups(tree: TreeNode[]): NavTreeGroup[] {
+  const toItem = (node: TreeNode): NavTreeItem => ({
+    title: node.title,
+    ...(node.slug ? { href: node.slug } : { id: node.title }),
+    ...(node.children.length > 0 ? { children: node.children.map(toItem) } : {}),
+  });
+
+  const rootPages = tree.filter((n) => n.children.length === 0);
+  const sections = tree.filter((n) => n.children.length > 0);
+
+  return [
+    { items: rootPages.map(toItem) },
+    ...sections.map((section) => ({
+      label: section.title,
+      items: [
+        // A section that is itself a page keeps a link to it at the top.
+        ...(section.slug ? [{ title: 'Overview', href: section.slug }] : []),
+        ...section.children.map(toItem),
+      ],
+    })),
+  ];
+}
+
+/** React Router adapter for NavTree — forwards active/indent/aria props. */
+function NavLink({ href, ...rest }: { href: string; children: React.ReactNode }) {
+  return <Link to={href} {...rest} />;
 }
 
 export default function DocsPage() {
-  const { page, tree } = useLoaderData<typeof loader>();
+  const { page, tree, slug } = useLoaderData<typeof loader>();
+
+  const navGroups = useMemo(() => toNavGroups(tree), [tree]);
+  const headings = useMemo(() => extractHeadings(page.body), [page.body]);
+
+  // The only override left: anchor ids on h2/h3, slugged with ratio-ui's own
+  // slugify — the same function extractHeadings uses for the TOC, so scroll-spy
+  // and anchors can't drift. Everything else (code blocks, inline code,
+  // blockquotes, dividers) renders theme-aware upstream since markdown 0.13.
+  const markdownComponents: MarkdownComponents = useMemo(
+    () => ({
+      h2: ({ children }) => (
+        <Heading as="h2" id={slugify(getTextContent(children))} style={{ scrollMarginTop: 76 }}>
+          {children}
+        </Heading>
+      ),
+      h3: ({ children }) => (
+        <Heading as="h3" id={slugify(getTextContent(children))} style={{ scrollMarginTop: 76 }}>
+          {children}
+        </Heading>
+      ),
+    }),
+    [],
+  );
 
   return (
     <div
       style={{
         display: 'flex',
-        gap: '2rem',
-        fontFamily: 'system-ui, sans-serif',
-        maxWidth: 1000,
-        margin: '3rem auto',
-        padding: '0 1rem',
-        lineHeight: 1.5,
+        alignItems: 'flex-start',
+        maxWidth: 1400,
+        margin: '0 auto',
+        width: '100%',
+        fontFamily: 'var(--font-body)',
+        color: 'var(--text)',
       }}
     >
-      <aside style={{ minWidth: 190, borderRight: '1px solid #eee', paddingRight: '1rem' }}>
-        <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Docs</strong>
-        <Nav nodes={tree} />
-        <p style={{ marginTop: '1.5rem', fontSize: '0.85rem' }}>
-          <Link to="/search" style={{ color: '#888' }}>
-            Search
-          </Link>
-        </p>
+      <aside
+        style={{
+          position: 'sticky',
+          top: 60,
+          flexShrink: 0,
+          width: 262,
+          maxHeight: 'calc(100vh - 60px)',
+          overflowY: 'auto',
+          padding: '26px 16px 40px 24px',
+          borderRight: '1px solid var(--border-1)',
+        }}
+      >
+        <NavTree groups={navGroups} currentPath={slug} LinkComponent={NavLink} aria-label="Documentation" />
       </aside>
 
-      <main style={{ flex: 1, minWidth: 0 }}>
-        <h1 style={{ marginBottom: '0.25rem' }}>{page.title}</h1>
-        {page.description && <p style={{ color: '#666', marginTop: 0 }}>{page.description}</p>}
-        <p style={{ fontSize: '0.8rem', color: '#999' }}>
-          collected from <code>{page.source}</code>
-        </p>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 40,
+          maxWidth: 1040,
+          margin: '0 auto',
+          padding: '40px 40px 80px',
+        }}
+      >
+        <main style={{ flex: 1, minWidth: 0 }}>
+          <MarkdownContent
+            markdown={page.body}
+            allowExternalLinks
+            customComponents={markdownComponents}
+          />
 
-        {/* Raw markdown for now — mapping markdown to components is Phase 4. */}
-        <pre
-          style={{
-            whiteSpace: 'pre-wrap',
-            background: '#f6f6f6',
-            padding: '1rem',
-            borderRadius: 6,
-            overflowX: 'auto',
-          }}
-        >
-          {page.body}
-        </pre>
-      </main>
+          <footer
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 48,
+              paddingTop: 20,
+              borderTop: '1px solid var(--border-1)',
+              fontSize: 14,
+              color: 'var(--text-subtle)',
+            }}
+          >
+            <span>
+              collected from <code>{page.source}</code>
+            </span>
+            {/* The edit link is provenance from the manifest (collect() resolves
+                the configured editUrl template per page) — the site knows
+                nothing about which repo the content came from. */}
+            {page.editUrl && (
+              <a
+                href={page.editUrl}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--primary)' }}
+              >
+                Edit this page
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <path d="M15 3h6v6" />
+                  <path d="M10 14 21 3" />
+                </svg>
+              </a>
+            )}
+          </footer>
+        </main>
+
+        {headings.length > 0 && (
+          <aside style={{ flexShrink: 0, width: 190, position: 'sticky', top: 86, alignSelf: 'flex-start' }}>
+            <TableOfContents headings={headings} />
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

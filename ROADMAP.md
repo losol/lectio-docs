@@ -67,9 +67,10 @@ packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
 
 apps/site                       React Router (framework mode, v8) reference site
   collects docs/ -> .lectio/, serves them at the site root from ./content
-  (fs loadBody), plus Orama search at /search. Prerendered to static HTML
-  (ssr: false) and deployed to Cloudflare as a Worker with static assets;
-  the future dev-docs replacement (Phase 4)
+  (fs loadBody), renders bodies with @eventuras/markdown (ratio-ui), with
+  Orama search in the header (<Search> CommandPalette, global Cmd+K).
+  Prerendered to static HTML (ssr: false) and deployed to Cloudflare as a
+  Worker with static assets; the future dev-docs replacement (Phase 4)
 
 docs/                           this repo's own documentation — the collector's source
 ```
@@ -150,11 +151,16 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   dependency, update `repo.json` / workspace config.
 
 ### Phase 4 — Batteries & retire dev-docs *(the North Star)*
+- ✅ Real markdown rendering in the reference site: `apps/site` renders
+  collected bodies with `@eventuras/markdown` (the ratio-ui renderer, now
+  published from the ratio-ui repo) — the toolkit packages stay
+  design-system-free. Callouts/MDX remain open (see deferred decisions).
 - Ship ready-made components and a **reference site** (a theme, or a
   `create-lectio-docs` scaffolder) — enough that the eventuras developer docs are
   produced by Lectio, so the hand-rolled `dev-docs` app is no longer needed.
-- Move search into the site chrome so it is available on **every page**,
-  replacing the standalone `/search` demo route.
+- ✅ Search lives in the site chrome: the header renders the `<Search>`
+  CommandPalette (built-in trigger + global ⌘K), available on every page —
+  the standalone `/search` route is gone.
 - Historia integration: `collect()` → a Payload collection (`plugin-nested-docs`
   for hierarchy, `plugin-search` for search).
 

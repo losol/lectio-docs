@@ -17,6 +17,7 @@ await collect({
   config: {
     output: '.lectio',
     sources: [{ glob: 'docs/**/*.md', target: '/' }],
+    editUrl: 'https://github.com/losol/lectio-docs/edit/main/{path}',
   },
 });
 
