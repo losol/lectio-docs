@@ -61,6 +61,42 @@ importers:
         specifier: ^8.1.5
         version: 8.1.5(@types/node@24.13.3)
 
+  packages/cli:
+    dependencies:
+      '@eventuras/lectio-docs':
+        specifier: workspace:*
+        version: link:../lectio-docs
+      '@eventuras/lectio-docs-react':
+        specifier: workspace:*
+        version: link:../lectio-docs-react
+      '@eventuras/markdown':
+        specifier: ^0.13.0
+        version: 0.13.0(@eventuras/ratio-ui@2.15.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@eventuras/ratio-ui':
+        specifier: ^2.15.0
+        version: 2.15.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@react-router/dev':
+        specifier: 8.2.0
+        version: 8.2.0(@react-router/serve@8.2.0(react-router@8.2.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3))(react-router@8.2.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)(vite@8.1.5(@types/node@24.13.3))
+      '@react-router/node':
+        specifier: 8.2.0
+        version: 8.2.0(react-router@8.2.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)
+      isbot:
+        specifier: ^5.2.1
+        version: 5.2.1
+      react:
+        specifier: ^19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.7
+        version: 19.2.7(react@19.2.7)
+      react-router:
+        specifier: 8.2.0
+        version: 8.2.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      vite:
+        specifier: ^8.1.0
+        version: 8.1.5(@types/node@24.13.3)
+
   packages/lectio-docs:
     dependencies:
       '@orama/orama':
