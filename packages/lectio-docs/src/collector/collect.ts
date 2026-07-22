@@ -28,6 +28,14 @@ interface CollectOptions {
  * framework-agnostic `./content` content source.
  */
 export async function collect({ rootDir, config, configDir }: CollectOptions): Promise<void> {
+  // Fail fast on a template without the placeholder — it would otherwise
+  // silently resolve to the same edit URL for every page.
+  if (config.editUrl && !config.editUrl.includes('{path}')) {
+    throw new Error(
+      `docs config: editUrl must contain a {path} placeholder, got "${config.editUrl}"`,
+    );
+  }
+
   const outputDir = resolve(configDir, config.output);
 
   // Clean output directory
@@ -65,11 +73,15 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
 
       const relTarget = relative(outputDir, targetPath).replaceAll('\\', '/');
       const slug = fileToSlug(relTarget);
+      const sourceRel = String(frontmatter.source ?? relative(rootDir, sourcePath)).replaceAll('\\', '/');
       pages.push({
         slug,
         title: String(frontmatter.title ?? slugTitle(slug)),
         description: frontmatter.description == null ? undefined : String(frontmatter.description),
-        source: String(frontmatter.source ?? relative(rootDir, sourcePath)).replaceAll('\\', '/'),
+        source: sourceRel,
+        // Resolved here, not in the host: only the collector knows which repo
+        // a page came from, which is what keeps multi-repo sourcing possible.
+        editUrl: config.editUrl ? config.editUrl.replaceAll('{path}', sourceRel) : undefined,
         file: relTarget,
         section: source.target,
         frontmatter,
