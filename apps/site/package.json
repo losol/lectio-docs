@@ -7,7 +7,7 @@
     "dev": "pnpm collect && react-router dev",
     "build": "pnpm collect && react-router build",
     "preview": "vite preview",
-    "typecheck": "react-router typegen && tsc --noEmit"
+    "typecheck": "pnpm collect && react-router typegen && tsc --noEmit"
   },
   "dependencies": {
     "@eventuras/lectio-docs": "workspace:*",

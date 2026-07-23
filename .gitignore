@@ -3,6 +3,7 @@ dist
 build
 .react-router
 .lectio
+lectio.config.json
 .wrangler
 apps/site/public/search-index.json
 *.tsbuildinfo
