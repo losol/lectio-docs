@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,3 +27,9 @@ await buildSearchIndex({
   outputPath: join(appDir, 'public', 'search-index.json'),
   log: (message) => console.log(message),
 });
+
+// The generic app code (content.server.ts, routes.ts) reads the content
+// location from here — the same file the lectio CLI writes when it materializes
+// this app for another repo. That shared indirection is what lets app/ be
+// copied to the CLI template unchanged.
+writeFileSync(join(appDir, 'lectio.config.json'), JSON.stringify({ contentDir }, null, 2) + '\n');

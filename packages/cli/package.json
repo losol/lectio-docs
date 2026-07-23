@@ -1,0 +1,28 @@
+{
+  "name": "lectio-docs",
+  "version": "0.0.0",
+  "description": "Run one command, get a docs site: collects scattered repo docs and builds a static, searchable site.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "lectio": "./bin/lectio.mjs"
+  },
+  "files": [
+    "bin",
+    "template"
+  ],
+  "dependencies": {
+    "@eventuras/lectio-docs": "workspace:*",
+    "@eventuras/lectio-docs-react": "workspace:*",
+    "@eventuras/markdown": "^0.13.0",
+    "@eventuras/ratio-ui": "^2.15.0",
+    "isbot": "^5.2.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "vite": "^8.1.0",
+    "@react-router/dev": "8.2.0",
+    "@react-router/node": "8.2.0",
+    "react-router": "8.2.0"
+  }
+}

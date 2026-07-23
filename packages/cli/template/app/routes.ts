@@ -5,14 +5,14 @@ import { type RouteConfig, index, route } from '@react-router/dev/routes';
 
 // Docs occupy the site root: manifest slugs map 1:1 onto URLs, and one module
 // (docs.tsx) serves them all — "/" via the index route, everything else via the
-// splat, which reads the slug from params["*"]. Search lives in the site header
-// (CommandPalette, ⌘K), so there is no route for it.
+// splat, which reads the slug from params["*"].
 //
 // Under ssr:false every route exporting a loader must have prerendered paths,
 // so each route is included only when it has pages to serve: the index only
 // when there is a root page, the splat only when there are non-root pages.
-// Without this a single-page site fails the build. Content location comes from
-// the generated lectio.config.json, read via cwd (the build runs there).
+// Without this a single-page site fails the build (the splat, or the index,
+// would be prerendered for nothing). Read via cwd — the CLI runs the build in
+// the materialized site directory, where lectio.config.json sits.
 const { contentDir } = JSON.parse(
   readFileSync(join(process.cwd(), 'lectio.config.json'), 'utf-8'),
 ) as { contentDir: string };

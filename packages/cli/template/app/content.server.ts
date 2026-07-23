@@ -7,29 +7,23 @@ import {
   type Manifest,
 } from '@eventuras/lectio-docs/content';
 
-// Absolute path to the collected content (manifest.json + markdown), from the
-// generated lectio.config.json. Written next to the app before every build —
-// by this app's collect script here, by the lectio CLI when it materializes
-// this app elsewhere — so this module is generic. Located via cwd, which the
-// build always runs in.
-const { contentDir } = JSON.parse(
+// Written by the CLI at materialization time: absolute path to the collected
+// content. Located via cwd, not import.meta.url — prerender runs this code
+// BUNDLED into build/server/, where file-relative paths point wrong, while
+// the CLI guarantees cwd is the materialized site dir for the whole build.
+const raw = JSON.parse(
   readFileSync(join(process.cwd(), 'lectio.config.json'), 'utf-8'),
 ) as { contentDir: string };
-const root = resolve(contentDir);
+const contentDir = resolve(raw.contentDir);
 
 let cached: ContentSource | null = null;
 
-/**
- * Build the content source from the collected manifest, loading bodies from disk.
- *
- * `fs` is the right seam for this host: prerendering runs loaders in Node at
- * build time, so the static output needs no server.
- */
+/** Content source over the collected manifest, bodies loaded from disk. */
 export function getContentSource(): ContentSource {
   if (cached) return cached;
 
   const manifest = JSON.parse(
-    readFileSync(join(root, 'manifest.json'), 'utf-8'),
+    readFileSync(join(contentDir, 'manifest.json'), 'utf-8'),
   ) as Manifest;
 
   cached = createContentSource({
@@ -37,8 +31,8 @@ export function getContentSource(): ContentSource {
     loadBody: (page) => {
       // Resolve and enforce a separator boundary so a page.file can't escape
       // contentDir via `..` or a prefix like `${contentDir}2/…`.
-      const filePath = resolve(root, page.file);
-      if (filePath !== root && !filePath.startsWith(root + sep)) {
+      const filePath = resolve(contentDir, page.file);
+      if (filePath !== contentDir && !filePath.startsWith(contentDir + sep)) {
         throw new Error(`Refusing to read outside the content directory: ${page.file}`);
       }
       return readFileSync(filePath, 'utf-8');
