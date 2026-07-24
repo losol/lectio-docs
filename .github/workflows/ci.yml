@@ -30,9 +30,24 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Topological: lectio-docs -> lectio-docs-react -> site.
-      # The site's build also runs `collect`, so this exercises the whole
+      # Topological: lectio-docs -> lectio-docs-react -> lectio-docs (app).
+      # The app's build also runs `collect`, so this exercises the whole
       # docs pipeline: collect -> manifest -> search index -> prerender.
       - run: pnpm -r build
 
-      - run: pnpm --filter site typecheck
+      - run: pnpm --filter lectio-docs typecheck
+
+      # Dogfood the packaged CLI: build examples/quickstart with `lectio build`
+      # exactly as a consumer would. The demo build above exercises the app; this
+      # exercises the bin (collect -> materialize -> prerender -> static output),
+      # so a change that breaks materialization turns CI red here. The nested
+      # page and content grep guard against an empty build passing on the SPA
+      # fallback index.html alone.
+      - name: Build examples/quickstart with the lectio CLI
+        working-directory: examples/quickstart
+        run: |
+          node "$GITHUB_WORKSPACE/apps/site-builder/bin/lectio.mjs" build
+          test -f dist/index.html
+          test -f dist/guides/writing-docs/index.html
+          test -f dist/search-index.json
+          grep -q "Quickstart" dist/index.html

@@ -65,12 +65,14 @@ packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
   .              useDocsSearch (headless hook) + <Search> (ratio-ui, optional peer)
                  type-only coupling to the core (SearchProvider / SearchResult)
 
-apps/site                       React Router (framework mode, v8) reference site
+apps/site-builder               React Router (framework mode, v8) reference site
   collects docs/ -> .lectio/, serves them at the site root from ./content
   (fs loadBody), renders bodies with @eventuras/markdown (ratio-ui), with
   Orama search in the header (<Search> CommandPalette, global Cmd+K).
   Prerendered to static HTML (ssr: false) and deployed to Cloudflare as a
-  Worker with static assets; the future dev-docs replacement (Phase 4)
+  Worker with static assets. Also published as `lectio-docs` with a `lectio`
+  bin: the CLI materializes this same app for any repo, so the demo and the
+  packaged site are one source, no template to keep in sync (Phase 4).
 
 docs/                           this repo's own documentation — the collector's source
 ```
@@ -107,7 +109,7 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - **Split the React bindings out** into `@eventuras/lectio-docs-react`
   (`useDocsSearch` + `<Search>`). The core is now vanilla TS/Node with no React
   dependency at all; the React package couples to it type-only.
-- Scaffolded `apps/site` — a **React Router (framework mode, v8)** reference site
+- Scaffolded `apps/site-builder` — a **React Router (framework mode, v8)** reference site
   that drives `useDocsSearch` against a sample index (proof the workspace wiring
   and the React bindings run under SSR + hydration). Real content-source wiring
   is Phase 2.
@@ -118,12 +120,12 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 
 ### Phase 1 — Stand up the repo
 - ✅ Converted to a pnpm workspace; core in `packages/lectio-docs`, React
-  bindings in `packages/lectio-docs-react`, reference site in `apps/site`.
+  bindings in `packages/lectio-docs-react`, reference site in `apps/site-builder`.
 - ✅ GitHub remote created; work lands through PRs.
 - ✅ CI — build + typecheck across the workspace on every PR and push to `main`.
   The site build runs `collect`, so CI exercises the whole pipeline: collect →
   manifest → search index → prerender.
-- ✅ CD — `apps/site` prerenders to static HTML and deploys to Cloudflare via
+- ✅ CD — `apps/site-builder` prerenders to static HTML and deploys to Cloudflare via
   `wrangler` as a Worker with static assets (not Pages), so adding server-side
   logic later is a `main` entry rather than a platform migration.
   *Pending:* the `lectio.losol.no` custom domain.
@@ -135,7 +137,7 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   the nav tree is derived at runtime, and the host injects `loadBody`.
 - ✅ Emit `manifest.json` from `collect()` — a flat `pages[]` of `PageMeta`
   (slug, title, description, source, `file`, section, frontmatter).
-- ✅ Validate with `apps/site` (the **React Router** reference site — proves
+- ✅ Validate with `apps/site-builder` (the **React Router** reference site — proves
   agnosticism): repo-root `docs/` → `collect()` → `.lectio/manifest.json` →
   `createContentSource` with an `fs` `loadBody`, served at the **site root**
   (slug == URL) with nav from `getTree`. A Next example under `examples/` is
@@ -143,7 +145,7 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 - ✅ `build-index` indexes the manifest + collected markdown instead of a
   framework's built HTML (the last Next-ism). Titles and URLs come from the
   manifest, so every host gets the same index — no built site required.
-  `apps/site` ships it at `/search-index.json` and queries it via `OramaProvider`.
+  `apps/site-builder` ships it at `/search-index.json` and queries it via `OramaProvider`.
 
 ### Phase 3 — Publish & migrate eventuras
 - Publish `@eventuras/lectio-docs` (npm or GitHub Packages).
@@ -151,13 +153,17 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   dependency, update `repo.json` / workspace config.
 
 ### Phase 4 — Batteries & retire dev-docs *(the North Star)*
-- ✅ Real markdown rendering in the reference site: `apps/site` renders
+- ✅ Real markdown rendering in the reference site: `apps/site-builder` renders
   collected bodies with `@eventuras/markdown` (the ratio-ui renderer, now
   published from the ratio-ui repo) — the toolkit packages stay
   design-system-free. Callouts/MDX remain open (see deferred decisions).
-- Ship ready-made components and a **reference site** (a theme, or a
-  `create-lectio-docs` scaffolder) — enough that the eventuras developer docs are
-  produced by Lectio, so the hand-rolled `dev-docs` app is no longer needed.
+- 🚧 **Packaged site / CLI** — `apps/site-builder` doubles as the `lectio-docs`
+  package with a `lectio` bin. `npx lectio build` in any repo collects its docs
+  and materializes this same app into a static site, so the demo and the shipped
+  CLI are **one source, no template to keep in sync**. This is the "run one
+  command, get a site" path that lets the eventuras developer docs be produced by
+  Lectio, retiring the hand-rolled `dev-docs` app. *Pending:* first npm publish
+  (trusted publisher), then it drops out of draft.
 - ✅ Search lives in the site chrome: the header renders the `<Search>`
   CommandPalette (built-in trigger + global ⌘K), available on every page —
   the standalone `/search` route is gone.
@@ -170,8 +176,18 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
 
 - **Positioning: "toolkit, not SSG" → possibly "toolkit *with* SSG".** The
   headless core is identical either way; only how much we invest in / market the
-  `apps/site` reference site differs. Explicitly *not* decided — kept open by
-  holding the seam: render/theme opinions stay in `apps/site`, never in the core.
+  `apps/site-builder` reference site differs. Explicitly *not* decided — kept open
+  by holding the seam: render/theme opinions stay in `apps/site-builder`, never in
+  the core.
+- **Packaged site: one source, copy-at-build (not reference).** The `lectio` CLI
+  ships `apps/site-builder`'s own app and materializes it per build, rather than
+  keeping a separate template or referencing a published app via `appDirectory`.
+  A spike proved React Router does not apply its app-source transforms (the
+  `.server` boundary, loader stripping) to files under `node_modules`, so a
+  zero-copy reference can't build — the app is copied out to a normal dir at
+  build time. Branding stays config-driven (`site.config.ts`, written per build);
+  output is `ssr: false` static-only for now. The site wordmark is inline for
+  now — to be extracted as a ratio-ui function later.
 - **peer vs dep for the core in `@eventuras/lectio-docs-react`.** Currently a
   plain `dependency` (`workspace:*`) for zero friction. At publish time, weigh a
   `peer` instead so consumers using both packages share one core version.

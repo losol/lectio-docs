@@ -46,7 +46,7 @@ jobs:
 
       # Typecheck here too: this job builds independently of CI, and we would
       # rather fail the deploy than publish something that does not typecheck.
-      - run: pnpm --filter site typecheck
+      - run: pnpm --filter lectio-docs typecheck
 
       # Invoked directly rather than through cloudflare/wrangler-action: that
       # action installs wrangler with `pnpm add`, which pnpm refuses at a
@@ -61,7 +61,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        working-directory: apps/site
+        working-directory: apps/site-builder
         run: >-
           pnpm dlx wrangler@4.112.0 deploy
           --name lectio-docs
