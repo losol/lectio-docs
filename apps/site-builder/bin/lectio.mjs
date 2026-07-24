@@ -132,14 +132,20 @@ await buildSearchIndex({
 
 // --- 4. dependency resolution via symlink -----------------------------------
 // Own package dir = parent of bin/. Where the deps live depends on layout:
-//  - workspace dev / npm with nesting: <own>/node_modules exists — use it
+//  - workspace dev / npm with nesting: <own>/node_modules holds them
 //  - installed via pnpm: realpath resolves into the virtual store, whose
 //    parent dir holds this package's deps as siblings
-//  - npm flat: <own>/node_modules absent, dirname(realpath) is the flat
-//    node_modules that holds everything
+//  - npm flat: dirname(realpath) is the flat node_modules holding everything
+//
+// We can't just test whether <own>/node_modules EXISTS: pnpm creates an empty
+// one inside the package in the virtual store, so its presence doesn't mean the
+// deps are there. Pick the candidate that actually holds a known direct dep
+// (react-router) instead.
 const ownPackageDir = realpathSync(pkgRoot);
-const ownNodeModules = join(ownPackageDir, 'node_modules');
-const depsDir = existsSync(ownNodeModules) ? ownNodeModules : dirname(ownPackageDir);
+const depsDir =
+  [join(ownPackageDir, 'node_modules'), dirname(ownPackageDir)].find((dir) =>
+    existsSync(join(dir, 'react-router')),
+  ) ?? dirname(ownPackageDir);
 
 // A REAL node_modules directory with one symlink per package — not a single
 // symlink to depsDir. Vite writes into node_modules (.vite-temp config
