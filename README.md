@@ -42,17 +42,19 @@ in.
 
 ## Reference site
 
-[`apps/site`](apps/site) collects this repository's own [`docs/`](docs) tree,
-renders it with React Router, prerenders to static HTML, and deploys to
-Cloudflare — live at [lectio.losol.no](https://lectio.losol.no). It doubles as
-the proof that the toolkit stays framework-agnostic.
+[`apps/site-builder`](apps/site-builder) collects this repository's own
+[`docs/`](docs) tree, renders it with React Router, prerenders to static HTML,
+and deploys to Cloudflare — live at [lectio.losol.no](https://lectio.losol.no).
+It doubles as the proof that the toolkit stays framework-agnostic, and is the
+same app the `lectio` CLI ships and materializes for other repos — one source,
+no template to keep in sync.
 
 ## Development
 
 ```sh
 pnpm install
-pnpm -r build              # core → react bindings → site (topological)
-pnpm --filter site dev     # collect docs/ and serve the site locally
+pnpm -r build                     # core → react bindings → app (topological)
+pnpm --filter lectio-docs dev     # collect docs/ and serve the site locally
 ```
 
 Releases are managed with [changesets](https://github.com/changesets/changesets):

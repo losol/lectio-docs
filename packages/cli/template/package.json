@@ -1,8 +1,0 @@
-{
-  "name": "lectio-site",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "isbot": "^5"
-  }
-}

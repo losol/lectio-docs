@@ -5,6 +5,6 @@ build
 .lectio
 lectio.config.json
 .wrangler
-apps/site/public/search-index.json
+apps/site-builder/public/search-index.json
 *.tsbuildinfo
 .DS_Store
