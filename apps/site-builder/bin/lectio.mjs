@@ -87,6 +87,28 @@ writeFileSync(
   JSON.stringify({ name: 'lectio-site', private: true, type: 'module', dependencies: { isbot: '^5' } }, null, 2) + '\n',
 );
 
+// A self-contained tsconfig so esbuild (which transforms react-router.config.ts
+// and vite.config.ts) stops here instead of walking up into the consumer's
+// repo. Without it, a parent tsconfig — e.g. one that `extends` a base package
+// — gets picked up and can fail to resolve, breaking the build for reasons that
+// have nothing to do with the docs.
+writeFileSync(
+  join(siteDir, 'tsconfig.json'),
+  JSON.stringify(
+    {
+      compilerOptions: {
+        target: 'ES2022',
+        module: 'ESNext',
+        moduleResolution: 'bundler',
+        jsx: 'react-jsx',
+        skipLibCheck: true,
+      },
+    },
+    null,
+    2,
+  ) + '\n',
+);
+
 // Where the app reads content from, and the branding it renders. site.config.ts
 // was copied above with this repo's own branding; overwrite it with the
 // consumer's, so app/ stays generic and config-driven.
