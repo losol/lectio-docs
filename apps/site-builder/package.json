@@ -1,8 +1,7 @@
 {
   "name": "lectio-docs",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Run one command, get a docs site: collects scattered repo docs and builds a static, searchable site.",
-  "private": true,
   "license": "MIT",
   "type": "module",
   "bin": {
