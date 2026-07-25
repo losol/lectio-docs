@@ -2,23 +2,22 @@
 /**
  * lectio — run one command, get a docs site.
  *
- * `lectio build` in a repo with a docs.config.{ts,js,mjs}:
+ *   lectio build   collect docs → a static, searchable site in ./dist
+ *   lectio dev     the same, but serve it locally with a dev server (HMR)
  *
- *   1. collects the configured sources (manifest + markdown)
- *   2. builds the search index
- *   3. materializes THIS package's own site app into .lectio/site — the same
+ * Both read a docs.config.{ts,js,mjs} from the current directory; if none
+ * exists, a starter one is scaffolded so a fresh repo shows a demo right away.
+ *
+ * How it works:
+ *   1. collect the configured sources (manifest + markdown) + a search index
+ *   2. materialize THIS package's own site app into .lectio/site — the same
  *      app that ships as the demo (apps/site-builder), so there is no separate
  *      template to keep in sync. React Router does not apply its app-source
  *      transforms (the .server boundary, loader stripping) to files under
- *      node_modules, so the app is copied out to a normal build dir here.
- *   4. links the build dir's node_modules to THIS package's dependency dir —
- *      dirname(realpath(<own package>)) holds the deps in both pnpm's
- *      virtual-store layout and npm's flat layout — so the consumer installs
- *      nothing beyond lectio-docs itself
- *   5. runs the React Router build there (prerenders every page)
- *   6. copies the static output to ./dist
- *
- * Spike quality: build command only, minimal argument handling.
+ *      node_modules, so the app is copied out to a normal dir here.
+ *   3. link the build dir's node_modules to THIS package's dependency dir, so
+ *      the consumer installs nothing beyond lectio-docs itself
+ *   4. run `react-router build` (prerender → ./dist), or `react-router dev`
  */
 
 import { cpSync, existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -30,20 +29,33 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
 
 const command = process.argv[2];
-if (command !== 'build') {
-  console.error('Usage: lectio build');
+if (command !== 'build' && command !== 'dev') {
+  console.error('Usage: lectio <build|dev>');
   process.exit(command ? 1 : 0);
 }
 
 const cwd = process.cwd();
 
-// --- 1. discover + load the user's docs config -----------------------------
-const configPath = ['docs.config.ts', 'docs.config.js', 'docs.config.mjs']
+// --- 1. discover the docs config, or scaffold a starter one ----------------
+let configPath = ['docs.config.ts', 'docs.config.js', 'docs.config.mjs']
   .map((name) => resolve(cwd, name))
   .find((candidate) => existsSync(candidate));
 if (!configPath) {
-  console.error('No docs.config.{ts,js,mjs} found in the current directory.');
-  process.exit(1);
+  // Zero-config: write a starter config and run with it, so `lectio dev` in a
+  // fresh repo shows a demo immediately. `**/*.md` sweeps the whole tree —
+  // collect already skips node_modules, dist, .next and dotfiles.
+  configPath = resolve(cwd, 'docs.config.ts');
+  writeFileSync(
+    configPath,
+    `// Created by lectio — edit to taste, then re-run.
+export default {
+  output: '.lectio',
+  sources: [{ glob: '**/*.md', target: '/' }],
+  site: { title: 'Docs' },
+};
+`,
+  );
+  console.log('No docs config found — wrote a starter docs.config.ts\n');
 }
 
 const config = (await import(pathToFileURL(configPath).href)).default;
@@ -166,14 +178,20 @@ for (const entry of readdirSync(depsDir)) {
   }
 }
 
-// --- 5. run the React Router build ------------------------------------------
+// --- 5. run React Router — a dev server, or a static build ------------------
 const rrDevPkg = require.resolve('@react-router/dev/package.json');
 const rrBin = join(dirname(rrDevPkg), require(rrDevPkg).bin['react-router']);
-const result = spawnSync(process.execPath, [rrBin, 'build'], {
-  cwd: siteDir,
-  stdio: 'inherit',
-});
-if (result.status !== 0) process.exit(result.status ?? 1);
+
+if (command === 'dev') {
+  // Long-running dev server with HMR on the app UI. Content is collected once
+  // at startup — edit markdown and re-run to refresh it. Runs until Ctrl+C.
+  console.log('\nStarting the dev server — Ctrl+C to stop.\n');
+  const dev = spawnSync(process.execPath, [rrBin, 'dev'], { cwd: siteDir, stdio: 'inherit' });
+  process.exit(dev.status ?? 0);
+}
+
+const build = spawnSync(process.execPath, [rrBin, 'build'], { cwd: siteDir, stdio: 'inherit' });
+if (build.status !== 0) process.exit(build.status ?? 1);
 
 // --- 6. static output --------------------------------------------------------
 const outDir = resolve(cwd, 'dist');
