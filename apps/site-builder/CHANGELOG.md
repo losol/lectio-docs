@@ -1,5 +1,17 @@
 # lectio-docs
 
+## 0.2.0
+
+### Minor Changes
+
+- e4ffa3f: Add `lectio dev` and zero-config scaffolding.
+
+  `lectio dev` materializes the site app and runs `react-router dev` (a local dev
+  server with HMR on the UI); content is collected once at startup. With no
+  `docs.config`, `dev` scaffolds a starter `docs.config.ts` (`**/*.md`) so a fresh
+  repo shows a demo immediately; `build` asks first when interactive and errors in
+  CI rather than writing files silently.
+
 ## 0.1.1
 
 ### Patch Changes
