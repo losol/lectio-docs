@@ -5,8 +5,9 @@
  *   lectio build   collect docs → a static, searchable site in ./dist
  *   lectio dev     the same, but serve it locally with a dev server (HMR)
  *
- * Both read a docs.config.{ts,js,mjs} from the current directory; if none
- * exists, a starter one is scaffolded so a fresh repo shows a demo right away.
+ * Both read a docs.config.{ts,js,mjs} from the current directory. With none,
+ * `dev` scaffolds a starter one (fresh repo → instant demo); `build` asks first
+ * when interactive, and errors in CI rather than writing files silently.
  *
  * How it works:
  *   1. collect the configured sources (manifest + markdown) + a search index
@@ -24,6 +25,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symli
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createInterface } from 'node:readline/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
@@ -41,21 +43,42 @@ let configPath = ['docs.config.ts', 'docs.config.js', 'docs.config.mjs']
   .map((name) => resolve(cwd, name))
   .find((candidate) => existsSync(candidate));
 if (!configPath) {
-  // Zero-config: write a starter config and run with it, so `lectio dev` in a
-  // fresh repo shows a demo immediately. `**/*.md` sweeps the whole tree —
-  // collect already skips node_modules, dist, .next and dotfiles.
-  configPath = resolve(cwd, 'docs.config.ts');
-  writeFileSync(
-    configPath,
-    `// Created by lectio — edit to taste, then re-run.
+  // `**/*.md` sweeps the whole tree — collect already skips node_modules,
+  // dist, .next and dotfiles.
+  const starter = `// Created by lectio — edit to taste, then re-run.
 export default {
   output: '.lectio',
   sources: [{ glob: '**/*.md', target: '/' }],
   site: { title: 'Docs' },
 };
-`,
-  );
-  console.log('No docs config found — wrote a starter docs.config.ts\n');
+`;
+  const writeStarter = () => {
+    configPath = resolve(cwd, 'docs.config.ts');
+    writeFileSync(configPath, starter);
+    console.log('Wrote a starter docs.config.ts\n');
+  };
+
+  if (command === 'dev') {
+    // dev is the on-ramp: scaffold and go, so a fresh repo shows a demo.
+    console.log('No docs config found — scaffolding a starter one.');
+    writeStarter();
+  } else if (process.stdin.isTTY) {
+    // build writes to the repo only with consent — ask when interactive.
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = (await rl.question('No docs config found. Create a starter docs.config.ts? [y/N] '))
+      .trim()
+      .toLowerCase();
+    rl.close();
+    if (answer !== 'y' && answer !== 'yes') {
+      console.error('Aborted — nothing to build from.');
+      process.exit(1);
+    }
+    writeStarter();
+  } else {
+    // Non-interactive (CI): never write files silently.
+    console.error('No docs.config.{ts,js,mjs} found. Run `lectio dev` to scaffold one, or add docs.config.ts.');
+    process.exit(1);
+  }
 }
 
 const config = (await import(pathToFileURL(configPath).href)).default;
