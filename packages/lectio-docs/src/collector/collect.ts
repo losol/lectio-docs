@@ -108,11 +108,13 @@ function buildTargetPath(file: string, source: DocSource, outputDir: string): st
   const fileName = basename(file);
   const fileDir = dirname(file);
 
-  // For glob patterns like "libs/*/README.md", use the parent directory name
-  // as the file name: libs/event-sdk/README.md → /libraries/event-sdk.md
+  // README.md is renamed so it acts as an index page. A README at the
+  // collection root is the site's home (index.md → the target itself, e.g. "/");
+  // a nested one is named after its parent directory, so
+  // libs/event-sdk/README.md → /libraries/event-sdk.
   if (fileName.toLowerCase() === 'readme.md') {
     const parentDir = basename(fileDir);
-    const targetName = `${parentDir}.md`;
+    const targetName = parentDir === '.' ? 'index.md' : `${parentDir}.md`;
     return join(outputDir, source.target, targetName);
   }
 
