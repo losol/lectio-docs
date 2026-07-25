@@ -1,5 +1,14 @@
 # @eventuras/docs-framework
 
+## 0.3.1
+
+### Patch Changes
+
+- f606a78: A `README.md` at the collection root now becomes the home page (`/`) instead of
+  a broken `/.` slug — so a repo's top-level README is the natural landing page,
+  which is what the zero-config `**/*.md` setup wants. Nested READMEs are
+  unchanged (still named after their parent directory).
+
 ## 0.3.0
 
 ### Minor Changes
