@@ -1,5 +1,16 @@
 # lectio-docs
 
+## 0.2.1
+
+### Patch Changes
+
+- 307fcc0: Fix `lectio dev` rendering a blank page when run via `npx` (or any install where
+  dependencies resolve outside the site dir). The materialized dev server now lets
+  Vite read the symlinked dependencies, so React Router's client entry loads.
+- 2cf619d: Generated `.lectio/` and `dist/` directories now self-ignore: `lectio` writes a
+  `.gitignore` inside each, so they stay out of the consumer's `git status`
+  without the CLI ever modifying the repo's root `.gitignore`.
+
 ## 0.2.0
 
 ### Minor Changes
