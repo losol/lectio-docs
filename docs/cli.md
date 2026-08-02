@@ -77,6 +77,9 @@ Netlify, GitHub Pages, an object store:
 npx wrangler pages deploy dist --project-name my-docs
 ```
 
+See [Deploy to Cloudflare](/deployment/cloudflare) for the full walkthrough —
+fallback pages, CI and custom domains.
+
 ## `dev` vs `build` when there's no config
 
 - **`dev`** scaffolds a starter `docs.config.ts` and runs — it's the on-ramp for
