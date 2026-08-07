@@ -1,5 +1,5 @@
 ---
-"lectio-docs": minor
+"@eventuras/lectio-docs": minor
 ---
 
 With no `docs.config.ts`, the CLI now generates an opinionated starter from the
