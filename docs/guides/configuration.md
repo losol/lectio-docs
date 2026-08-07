@@ -19,6 +19,14 @@ resulting output path:
 `README.md` is renamed to its parent directory's name, so a library's readme
 becomes a page named after the library.
 
+## Navigation order
+
+The sidebar follows the order pages appear in the manifest, which is the order
+your `sources` are listed — so reordering sources reorders the sidebar. Two
+rules override it: the home page always leads, and `adr/` (or `decisions/`)
+sinks to the bottom of whatever level it sits on, since decision records are
+reference material rather than reading material.
+
 ## Frontmatter
 
 Existing frontmatter is preserved. Missing values are filled in: the title falls

@@ -28,6 +28,8 @@ import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { starterConfig } from './starter-config.mjs';
+
 const require = createRequire(import.meta.url);
 
 const command = process.argv[2];
@@ -43,15 +45,7 @@ let configPath = ['docs.config.ts', 'docs.config.js', 'docs.config.mjs']
   .map((name) => resolve(cwd, name))
   .find((candidate) => existsSync(candidate));
 if (!configPath) {
-  // `**/*.md` sweeps the whole tree — collect already skips node_modules,
-  // dist, .next and dotfiles.
-  const starter = `// Created by lectio — edit to taste, then re-run.
-export default {
-  output: '.lectio',
-  sources: [{ glob: '**/*.md', target: '/' }],
-  site: { title: 'Docs' },
-};
-`;
+  const starter = starterConfig(cwd);
   const writeStarter = () => {
     configPath = resolve(cwd, 'docs.config.ts');
     writeFileSync(configPath, starter);

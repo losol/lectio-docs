@@ -25,9 +25,14 @@ Run `dev` in any repo that has markdown in it:
 npx lectio-docs dev
 ```
 
-With no `docs.config` present, it writes a starter one (matching `**/*.md`) and
-opens a local server, so you see your docs as a site immediately. Edit the
-generated `docs.config.ts` and re-run.
+With no `docs.config` present, it writes a starter one and opens a local
+server, so you see your docs as a site immediately. The starter follows the
+repo's shape: root `docs/` comes first, then app readmes and docs under
+**Apps**, then **Packages** and **Libs**. Directory-name variants land in the
+same group — `apps/` or `Applications/` both become `/apps`, and `libs/` or
+`Libraries/` become `/libs`. A repo with none of those directories gets a
+whole-tree `**/*.md` sweep instead. Source order is sidebar order, so
+regrouping is just editing the generated `docs.config.ts` and re-running.
 
 ## Configure your sources
 

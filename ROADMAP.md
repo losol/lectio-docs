@@ -164,6 +164,14 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   command, get a site" path that lets the eventuras developer docs be produced by
   Lectio, retiring the hand-rolled `dev-docs` app. *Pending:* first npm publish
   (trusted publisher), then it drops out of draft.
+- ✅ **Opinionated starter layout** — with no `docs.config`, the scaffolder
+  reads the repo's shape: root `docs/` on top, then app readmes + docs under
+  `/apps`, then `/packages` and `/libs`. Name variants share a group (`apps/`
+  or `Applications/`; `libs/` or `Libraries/`); repos without these dirs keep
+  the whole-tree `**/*.md` sweep. Source order is sidebar order, so the
+  generated config *is* the navigation — configurability is editing the file.
+  `buildTree` adds the two orderings source order can't express: home leads,
+  and `adr/` sinks to the bottom of its level.
 - ✅ Search lives in the site chrome: the header renders the `<Search>`
   CommandPalette (built-in trigger + global ⌘K), available on every page —
   the standalone `/search` route is gone.
