@@ -1,5 +1,17 @@
 # lectio-docs
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [e8dc6b3]
+- Updated dependencies [e8dc6b3]
+- Updated dependencies [453347d]
+- Updated dependencies [c8153bb]
+- Updated dependencies [47461aa]
+  - @eventuras/lectio-docs@0.4.0
+  - @eventuras/lectio-docs-react@0.1.3
+
 ## 0.2.2
 
 ### Patch Changes

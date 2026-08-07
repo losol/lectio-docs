@@ -1,5 +1,76 @@
 # @eventuras/docs-framework
 
+## 0.4.0
+
+### Minor Changes
+
+- e8dc6b3: Multilingual documentation sets, opt-in via `locales` / `defaultLocale` in
+  `DocsConfig`. A document's language comes from its frontmatter (`locale:` or
+  `language:` — the only option when the filename isn't ours, like a package's
+  `README.md`), else a filename suffix (`terms.nb.md`, the recommended
+  convention), else a path segment (`nb/terms.md`). Only configured locales are
+  recognised, so `notes.draft.md` and `apps/v2/README.md` aren't mistaken for
+  translations.
+
+  The marker is stripped from the slug, so every translation of a document shares
+  one URL and stays one page in the nav. `getTree(locale)`, `getPages(locale)` and
+  `getPage(slug, locale)` resolve to the closest version available and report the
+  locale the page is actually written in, so a host can tell the reader when they
+  got a fallback; `getLocales()` lists what the manifest holds. Untranslated pages
+  stay in the tree rather than being hidden.
+
+  Omit `locales` and nothing changes: pages carry no `locale`, manifests are
+  byte-identical to before, and the existing no-argument calls behave exactly as
+  they always have.
+
+- e8dc6b3: `parseFrontmatter` is exported from `./content` — the collector's private reader,
+  now shared instead of duplicated. It is deliberately not a YAML parser: scalar
+  `key: value` lines, values left as written, which is what documentation
+  frontmatter actually is and what keeps the dependency tree at what the collector
+  and the search index genuinely need.
+
+  What it can't represent — lists, nested maps, block and flow scalars — it now
+  names in `unsupportedKeys` instead of dropping in silence, and `collect()` warns
+  per file. A reader this small is fine; one that loses a `tags:` list without
+  saying so is not.
+
+- 453347d: Build a manifest without `collect()`, and resolve the links documents make to
+  each other.
+
+  `pathToPage` exports the file-to-page logic the collector uses — the slug a path
+  gets, and the language it is written in — so a host whose content changes
+  without a rebuild can assemble a manifest at runtime and still get the tree,
+  the locale fallback and the search index. `pathToSlug`, `pathToLocale`,
+  `normalizeSlug` and `resolveRelativePath` come with it, all pure and
+  dependency-free.
+
+  `source.resolveLink(href, fromSource)` maps a relative `*.md` link to the page
+  it means, resolved against the source path of the document containing it rather
+  than against a bare filename. Two sections can then each hold a `config.md`
+  without `[overview](../guides/config.md)` becoming ambiguous, and a link from
+  `nb/privacy.md` to `terms.md` lands on the Norwegian version of that page.
+
+  A `slug:` in frontmatter now overrides the path-derived slug, so a document can
+  keep a short, stable URL while its filename stays descriptive. Translations that
+  disagree on the slug they declare are warned about while collecting — they would
+  otherwise quietly stop being one page.
+
+- c8153bb: With no `docs.config.ts`, the CLI now generates an opinionated starter from the
+  repo's shape: root `docs/` first, then app readmes and docs under `/apps`, then
+  `/packages` and `/libs`. Name variants share a group (`apps/` or `Applications/`,
+  `libs/` or `Libraries/`), and repos with none of these directories keep the
+  whole-tree `**/*.md` sweep.
+
+  Source order is sidebar order, so the generated config _is_ the navigation —
+  configuring it means editing the file it wrote.
+
+### Patch Changes
+
+- 47461aa: `buildTree` puts the home page first and sinks decision-record sections (`adr`,
+  `adrs`, `decisions`) to the bottom of the level they sit on. ADRs are reference
+  material read after the narrative docs, and manifest order — which is glob
+  order — otherwise scattered them mid-nav.
+
 ## 0.3.1
 
 ### Patch Changes
