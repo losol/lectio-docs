@@ -146,6 +146,12 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   framework's built HTML (the last Next-ism). Titles and URLs come from the
   manifest, so every host gets the same index — no built site required.
   `apps/site-builder` ships it at `/search-index.json` and queries it via `OramaProvider`.
+- ✅ **Locales, opt-in.** `locales` / `defaultLocale` in `DocsConfig`; a document's
+  language comes from frontmatter, a filename suffix (`terms.nb.md`) or a path
+  segment. The marker is stripped from the slug, so translations of a document
+  share one URL and stay one page in the nav, and `getTree`/`getPages`/`getPage`
+  take a locale and fall back to the default. Omitting `locales` leaves manifests
+  byte-identical — single-language sets pay nothing.
 
 ### Phase 3 — Publish & migrate eventuras
 - Publish `@eventuras/lectio-docs` (npm or GitHub Packages).

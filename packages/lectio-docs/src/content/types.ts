@@ -28,6 +28,13 @@ export interface PageMeta {
   file: string;
   /** Section this page belongs to, e.g. "/libraries" (the source's target). */
   section?: string;
+  /**
+   * BCP-47 locale tag this page is written in, e.g. "nb". Omitted for a page
+   * that declares none, which the content source reads as its `defaultLocale`
+   * — so a single-language manifest, and every manifest written before locales
+   * existed, keeps working unchanged.
+   */
+  locale?: string;
   /** Full frontmatter, for host-specific extension beyond the typed fields. */
   frontmatter: Record<string, unknown>;
 }
@@ -67,13 +74,30 @@ export interface CreateContentSourceOptions {
   manifest: Manifest;
   /** How to load a page's raw file contents. Sync or async. */
   loadBody: LoadBody;
+  /**
+   * Locale a page with no `locale` of its own is taken to be written in, and
+   * the one every read falls back to. Defaults to `"en"`.
+   */
+  defaultLocale?: string;
 }
 
 export interface ContentSource {
-  /** Navigation tree derived from page slugs. Pure, synchronous. */
-  getTree(): TreeNode[];
-  /** Flat list of all page metadata, in collection order. Pure, synchronous. */
-  getPages(): PageMeta[];
-  /** Load one page (metadata + body) by slug; `null` if the slug is unknown. */
-  getPage(slug: string): Promise<Page | null>;
+  /**
+   * Navigation tree derived from page slugs, one entry per slug: the requested
+   * locale's version of a page where there is one, the fallback otherwise. A
+   * nav that hid untranslated pages would be worse than one that shows them in
+   * another language. Pure, synchronous.
+   */
+  getTree(locale?: string): TreeNode[];
+  /** Flat list of page metadata, resolved for a locale the same way. Pure, synchronous. */
+  getPages(locale?: string): PageMeta[];
+  /**
+   * Load one page (metadata + body) by slug, in the closest locale available:
+   * the one asked for, else the default. The returned `locale` is the one the
+   * page is actually written in, so a host can tell the reader when it differs
+   * from what they asked for. `null` if the slug is unknown.
+   */
+  getPage(slug: string, locale?: string): Promise<Page | null>;
+  /** Locales that appear in the manifest, in first-seen order. */
+  getLocales(): string[];
 }

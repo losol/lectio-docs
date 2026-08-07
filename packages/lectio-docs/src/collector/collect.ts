@@ -3,6 +3,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import fg from 'fast-glob';
 
+import { parseFrontmatter } from '../content/frontmatter.js';
 import type { Manifest, PageMeta } from '../content/types.js';
 import type { DocSource, DocsConfig } from './config.js';
 
@@ -36,6 +37,14 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
     );
   }
 
+  const locales = config.locales ?? [];
+  const defaultLocale = config.defaultLocale ?? 'en';
+  if (locales.length > 0 && !locales.includes(defaultLocale)) {
+    throw new Error(
+      `docs config: defaultLocale "${defaultLocale}" is not in locales [${locales.join(', ')}]`,
+    );
+  }
+
   const outputDir = resolve(configDir, config.output);
 
   // Clean output directory
@@ -62,7 +71,7 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
 
     for (const file of files) {
       const sourcePath = resolve(rootDir, file);
-      const targetPath = buildTargetPath(file, source, outputDir);
+      const targetPath = buildTargetPath(file, source, outputDir, locales);
 
       const content = readFileSync(sourcePath, 'utf-8');
       const { content: enriched, frontmatter } = enrichContent(content, sourcePath, source, rootDir);
@@ -72,13 +81,20 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
       writeFileSync(targetPath, enriched);
 
       const relTarget = relative(outputDir, targetPath).replaceAll('\\', '/');
-      const slug = fileToSlug(relTarget);
+      const slug = fileToSlug(relTarget, locales);
+      // Read from the source path, not the target: a locale-named directory is
+      // part of where the file came from and need not survive into the output.
+      const locale = detectLocale(file, frontmatter, locales, defaultLocale);
       const sourceRel = String(frontmatter.source ?? relative(rootDir, sourcePath)).replaceAll('\\', '/');
       pages.push({
         slug,
         title: String(frontmatter.title ?? slugTitle(slug)),
         description: frontmatter.description == null ? undefined : String(frontmatter.description),
         source: sourceRel,
+        // Single-language sets carry no locale at all, so their manifests stay
+        // exactly as before; multilingual ones state it on every page rather
+        // than leaning on the reader's default matching the collector's.
+        locale: locales.length === 0 ? undefined : locale,
         // Resolved here, not in the host: only the collector knows which repo
         // a page came from, which is what keeps multi-repo sourcing possible.
         editUrl: config.editUrl ? config.editUrl.replaceAll('{path}', sourceRel) : undefined,
@@ -104,7 +120,12 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
  * Determine the output file path for a source file.
  * README.md becomes index.md so it acts as a directory index page.
  */
-function buildTargetPath(file: string, source: DocSource, outputDir: string): string {
+function buildTargetPath(
+  file: string,
+  source: DocSource,
+  outputDir: string,
+  locales: string[] = [],
+): string {
   const fileName = basename(file);
   const fileDir = dirname(file);
 
@@ -112,9 +133,15 @@ function buildTargetPath(file: string, source: DocSource, outputDir: string): st
   // collection root is the site's home (index.md → the target itself, e.g. "/");
   // a nested one is named after its parent directory, so
   // libs/event-sdk/README.md → /libraries/event-sdk.
-  if (fileName.toLowerCase() === 'readme.md') {
+  //
+  // A translated README (README.nb.md) is renamed the same way and keeps its
+  // suffix, so it lands beside the original and slugs to the same page.
+  const readme = /^readme(?:\.([^.]+))?\.md$/i.exec(fileName);
+  const readmeLocale = readme?.[1];
+  if (readme && (readmeLocale === undefined || locales.includes(readmeLocale))) {
+    const suffix = readmeLocale === undefined ? '' : `.${readmeLocale}`;
     const parentDir = basename(fileDir);
-    const targetName = parentDir === '.' ? 'index.md' : `${parentDir}.md`;
+    const targetName = parentDir === '.' ? `index${suffix}.md` : `${parentDir}${suffix}.md`;
     return join(outputDir, source.target, targetName);
   }
 
@@ -155,7 +182,20 @@ function enrichContent(
   source: DocSource,
   rootDir: string,
 ): { content: string; frontmatter: Record<string, unknown> } {
-  const { frontmatter: existingFrontmatter, body } = parseFrontmatter(content);
+  const {
+    frontmatter: existingFrontmatter,
+    body,
+    unsupportedKeys,
+  } = parseFrontmatter(content);
+
+  // The reader handles scalars. Anything structural is named here rather than
+  // disappearing between the source file and the manifest.
+  if (unsupportedKeys.length > 0) {
+    console.warn(
+      `  ⚠ ${relative(rootDir, sourcePath)}: frontmatter keys not read ` +
+        `(only scalar values are): ${unsupportedKeys.join(', ')}`,
+    );
+  }
 
   const frontmatter: Record<string, unknown> = { ...existingFrontmatter };
 
@@ -191,12 +231,51 @@ function enrichContent(
 /**
  * Map an output-relative file path to a URL slug.
  * "index.md" → "/", "guides/index.md" → "/guides", "libraries/x.md" → "/libraries/x"
+ *
+ * A locale marker is dropped on the way — "terms.nb.md" and "nb/terms.md" both
+ * slug to "/terms" — so a document's translations share one URL.
  */
-function fileToSlug(file: string): string {
-  let slug = '/' + file.replaceAll('\\', '/');
+function fileToSlug(file: string, locales: string[] = []): string {
+  const segments = file
+    .replaceAll('\\', '/')
+    .split('/')
+    .filter((segment) => !locales.includes(segment));
+
+  let slug = '/' + segments.join('/');
   slug = slug.replace(/\.mdx?$/i, '');
+  slug = stripLocaleSuffix(slug, locales);
   slug = slug.replace(/\/index$/i, '');
   return slug || '/';
+}
+
+/** Drops a trailing ".<locale>" from an extension-less path. */
+function stripLocaleSuffix(path: string, locales: string[]): string {
+  const lastDot = path.lastIndexOf('.');
+  if (lastDot <= path.lastIndexOf('/')) return path;
+  return locales.includes(path.slice(lastDot + 1)) ? path.slice(0, lastDot) : path;
+}
+
+/**
+ * The locale a document is written in: what its frontmatter declares, else a
+ * recognised filename suffix or path segment, else the configured default.
+ * See {@link DocsConfig.defaultLocale} for why frontmatter outranks the path.
+ */
+function detectLocale(
+  file: string,
+  frontmatter: Record<string, unknown>,
+  locales: string[],
+  defaultLocale: string,
+): string {
+  const declared = frontmatter.locale ?? frontmatter.language;
+  if (typeof declared === 'string' && declared.trim() !== '') return declared.trim();
+
+  const segments = file.replaceAll('\\', '/').split('/');
+  const inPath = segments.slice(0, -1).find((segment) => locales.includes(segment));
+  if (inPath !== undefined) return inPath;
+
+  const name = (segments.at(-1) ?? '').replace(/\.mdx?$/i, '');
+  const suffix = name.slice(name.lastIndexOf('.') + 1);
+  return locales.includes(suffix) ? suffix : defaultLocale;
 }
 
 /** Fallback page title derived from the slug's last segment. */
@@ -227,43 +306,6 @@ function findNearestPackageJson(
     dir = dirname(dir);
   }
   return null;
-}
-
-/**
- * Parse YAML frontmatter from markdown content.
- * Replaces gray-matter to avoid the js-yaml vulnerability.
- */
-function parseFrontmatter(content: string): { frontmatter: Record<string, unknown>; body: string } {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(content);
-  if (!match) {
-    return { frontmatter: {}, body: content };
-  }
-
-  const yamlBlock = match[1] ?? '';
-  const body = match[2] ?? '';
-  const frontmatter: Record<string, unknown> = {};
-
-  for (const line of yamlBlock.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex === -1) continue;
-
-    const key = trimmed.substring(0, colonIndex).trim();
-    let value: string = trimmed.substring(colonIndex + 1).trim();
-
-    // Strip surrounding quotes
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-
-    if (key) {
-      frontmatter[key] = value;
-    }
-  }
-
-  return { frontmatter, body };
 }
 
 /**

@@ -66,6 +66,48 @@ await source.getPage('/libraries/event-sdk'); // metadata + raw markdown body
 `fs` in Node (works for SSR and prerendering), `fetch` in a SPA,
 `import.meta.glob` with a bundler. Rendering the markdown is entirely yours.
 
+## Languages (opt-in)
+
+List the locales a documentation set is written in, and translations of a
+document collapse onto one slug:
+
+```ts
+export default defineDocsConfig({
+  output: '.lectio',
+  locales: ['en', 'nb'],
+  defaultLocale: 'en',       // assumed for a document that declares none
+  sources: [{ glob: 'docs/**/*.md', target: '/' }],
+});
+```
+
+A document's locale comes from the first of these that applies:
+
+| | Use when |
+| --- | --- |
+| `locale:` (or `language:`) in frontmatter | The filename isn't yours to choose — a package's `README.md`. Always wins. |
+| A filename suffix, `terms.nb.md` | The recommended convention. Self-evident, and it survives being collected flat. |
+| A path segment, `nb/terms.md` | The repository is already laid out that way. |
+| `defaultLocale` | Everything else. |
+
+Only locales you list are recognised in a filename or a path, so `notes.draft.md`
+and `apps/v2/README.md` aren't mistaken for translations. The marker is stripped
+from the slug either way, so `terms.md`, `terms.nb.md` and `nb/terms.md` are all
+`/terms` — one page, in three languages.
+
+```ts
+source.getTree('nb');              // nav in Norwegian
+const page = await source.getPage('/terms', 'nb');
+page.locale;                       // 'en' if there is no Norwegian version yet
+```
+
+Reads fall back to `defaultLocale`, and the returned `locale` is the one the page
+is actually written in — so a host can tell the reader when they got a fallback.
+The tree keeps untranslated pages rather than hiding them.
+
+Omit `locales` and nothing changes: pages carry no locale, manifests are
+byte-identical to before, and `getTree()`/`getPage(slug)` behave exactly as they
+always have.
+
 ## Search (opt-in)
 
 Build an [Orama](https://oramasearch.com) index from the collected manifest at
