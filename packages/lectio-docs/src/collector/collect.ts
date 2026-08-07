@@ -4,6 +4,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import fg from 'fast-glob';
 
 import { parseFrontmatter } from '../content/frontmatter.js';
+import { normalizeSlug, pathToLocale, pathToSlug } from '../content/paths.js';
 import type { Manifest, PageMeta } from '../content/types.js';
 import type { DocSource, DocsConfig } from './config.js';
 
@@ -81,10 +82,14 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
       writeFileSync(targetPath, enriched);
 
       const relTarget = relative(outputDir, targetPath).replaceAll('\\', '/');
-      const slug = fileToSlug(relTarget, locales);
+      // `slug:` in frontmatter overrides the path — a document can keep a short,
+      // stable URL (`/terms`) while its file stays descriptive (terms-of-use.md).
+      const declaredSlug = typeof frontmatter.slug === 'string' ? frontmatter.slug.trim() : '';
+      const slug =
+        declaredSlug === '' ? pathToSlug(relTarget, locales) : normalizeSlug(declaredSlug);
       // Read from the source path, not the target: a locale-named directory is
       // part of where the file came from and need not survive into the output.
-      const locale = detectLocale(file, frontmatter, locales, defaultLocale);
+      const locale = pathToLocale(file, { locales, defaultLocale, frontmatter });
       // Only frontmatter can name an unlisted locale — a suffix or a directory
       // has to match `locales` to be read as one at all. Left in the manifest,
       // but said out loud: a typo here silently orphans a translation.
@@ -117,6 +122,8 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
       totalFiles++;
     }
   }
+
+  warnOnSlugDisagreement(pages, locales);
 
   const manifest: Manifest = { version: 1, pages };
   const manifestPath = join(outputDir, 'manifest.json');
@@ -243,58 +250,7 @@ function enrichContent(
   return { content: formatFrontmatter(frontmatter) + body, frontmatter };
 }
 
-/**
- * Map an output-relative file path to a URL slug.
- * "index.md" → "/", "guides/index.md" → "/guides", "libraries/x.md" → "/libraries/x"
- *
- * A locale marker is dropped on the way — "terms.nb.md" and "nb/terms.md" both
- * slug to "/terms" — so a document's translations share one URL.
- */
-function fileToSlug(file: string, locales: string[] = []): string {
-  const segments = file
-    .replaceAll('\\', '/')
-    .split('/')
-    .filter((segment) => !locales.includes(segment));
 
-  let slug = '/' + segments.join('/');
-  slug = slug.replace(/\.mdx?$/i, '');
-  slug = stripLocaleSuffix(slug, locales);
-  slug = slug.replace(/\/index$/i, '');
-  return slug || '/';
-}
-
-/** Drops a trailing ".<locale>" from an extension-less path. */
-function stripLocaleSuffix(path: string, locales: string[]): string {
-  const lastDot = path.lastIndexOf('.');
-  if (lastDot <= path.lastIndexOf('/')) return path;
-  return locales.includes(path.slice(lastDot + 1)) ? path.slice(0, lastDot) : path;
-}
-
-/**
- * The locale a document is written in: what its frontmatter declares, else a
- * recognised filename suffix or path segment, else the configured default.
- * See {@link DocsConfig.defaultLocale} for why frontmatter outranks the path.
- */
-function detectLocale(
-  file: string,
-  frontmatter: Record<string, unknown>,
-  locales: string[],
-  defaultLocale: string,
-): string {
-  const declared = frontmatter.locale ?? frontmatter.language;
-  if (typeof declared === 'string' && declared.trim() !== '') return declared.trim();
-
-  const segments = file.replaceAll('\\', '/').split('/');
-
-  // The name outranks the directory: `nb/terms.en.md` is English filed under a
-  // Norwegian directory, and naming the file is the more deliberate act.
-  const name = (segments.at(-1) ?? '').replace(/\.mdx?$/i, '');
-  const suffix = name.slice(name.lastIndexOf('.') + 1);
-  if (locales.includes(suffix)) return suffix;
-
-  const inPath = segments.slice(0, -1).find((segment) => locales.includes(segment));
-  return inPath ?? defaultLocale;
-}
 
 /** Fallback page title derived from the slug's last segment. */
 function slugTitle(slug: string): string {
@@ -342,4 +298,30 @@ function formatFrontmatter(data: Record<string, unknown>): string {
   });
 
   return `---\n${lines.join('\n')}\n---\n\n`;
+}
+
+/**
+ * A document's translations must agree on its slug, or they stop being one
+ * page. The path says which files belong together; a `slug:` that only some of
+ * them carry silently splits the set, so it is called out here rather than
+ * discovered as a missing translation later.
+ */
+function warnOnSlugDisagreement(pages: PageMeta[], locales: string[]): void {
+  if (locales.length === 0) return;
+
+  const byPathSlug = new Map<string, PageMeta[]>();
+  for (const page of pages) {
+    const key = pathToSlug(page.file, locales);
+    byPathSlug.set(key, [...(byPathSlug.get(key) ?? []), page]);
+  }
+
+  for (const [pathSlug, group] of byPathSlug) {
+    const declared = new Set(group.map((page) => page.slug));
+    if (declared.size <= 1) continue;
+    console.warn(
+      `  ⚠ ${pathSlug}: translations disagree on their slug ` +
+        `(${[...declared].join(', ')}) — they will be separate pages. ` +
+        `Sources: ${group.map((page) => page.source).join(', ')}`,
+    );
+  }
 }

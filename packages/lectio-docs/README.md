@@ -41,7 +41,9 @@ original path), and a `manifest.json` is written alongside — a flat list of
 pages with slugs, titles and file paths.
 
 `README.md` becomes a page named after its parent directory, so
-`libs/event-sdk/README.md` → `/libraries/event-sdk`.
+`libs/event-sdk/README.md` → `/libraries/event-sdk`. A `slug:` in frontmatter
+overrides the path, so a document can keep a short, stable URL while its
+filename stays descriptive — `terms-of-use.md` with `slug: terms` is `/terms`.
 
 ## 3. Read it back
 
@@ -65,6 +67,45 @@ await source.getPage('/libraries/event-sdk'); // metadata + raw markdown body
 `createContentSource` is pure TypeScript. **You inject how bodies load** —
 `fs` in Node (works for SSR and prerendering), `fetch` in a SPA,
 `import.meta.glob` with a bundler. Rendering the markdown is entirely yours.
+
+### Without a build step
+
+A manifest is only data, so a host whose content changes without a rebuild — a
+directory mounted into a container, a CMS export — can build one itself.
+`pathToPage` is the same file-to-page logic `collect()` uses, exported:
+
+```ts
+import { pathToPage, parseFrontmatter, createContentSource } from '@eventuras/lectio-docs/content';
+
+const pages = files.map((file) => {                 // file is relative to the content root
+  const { frontmatter } = parseFrontmatter(read(file));
+  const { slug, locale } = pathToPage(file, { locales: ['en', 'nb'], frontmatter });
+  return { slug, locale, title: String(frontmatter.title ?? slug), source: file, file, frontmatter };
+});
+
+const source = createContentSource({ manifest: { version: 1, pages }, loadBody, defaultLocale: 'en' });
+```
+
+## Links between documents
+
+Documentation is written to read on disk and on a forge as well as in a host, so
+documents link to each other by path. `resolveLink` maps such a link to the page
+it means, resolved against the **source path of the document containing it**:
+
+```ts
+const page = await source.getPage('/privacy', 'nb');
+const link = source.resolveLink('terms-of-use.md', page.source);
+// → { page: { slug: '/terms', locale: 'nb', … }, suffix: '' }
+```
+
+Resolving against the source rather than the bare filename is what lets two
+sections each hold a `config.md` — `[overview](../guides/config.md)` still lands
+on the right one — and it settles language on the way: the link above came from
+`nb/privacy-policy.md`, so it resolved to the Norwegian `/terms`.
+
+Off-site, root-relative and anchor-only hrefs return null, as do files the
+manifest doesn't hold. Leave those as the author wrote them: a typo should read
+as a broken link, not point somewhere unintended.
 
 ## Languages (opt-in)
 
@@ -146,7 +187,7 @@ hook wraps the provider with debouncing and stale-response protection.
 | Import | Runs in | Contents |
 | --- | --- | --- |
 | `@eventuras/lectio-docs` | Node, build time | `collect`, `runCollect`, `defineDocsConfig` |
-| `@eventuras/lectio-docs/content` | anywhere | `createContentSource`, `buildTree`, types |
+| `@eventuras/lectio-docs/content` | anywhere | `createContentSource`, `buildTree`, `pathToPage`, `parseFrontmatter`, types |
 | `@eventuras/lectio-docs/search` | browser + Node | `OramaProvider`, `SearchProvider`/`SearchResult` types |
 | `@eventuras/lectio-docs/build-index` | Node, build time | `buildSearchIndex` |
 

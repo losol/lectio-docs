@@ -1,6 +1,12 @@
 import { stripFrontmatter } from './frontmatter.js';
+import { normalizeSlug, resolveRelativePath } from './paths.js';
 import { buildTree } from './tree.js';
-import type { ContentSource, CreateContentSourceOptions, PageMeta } from './types.js';
+import type {
+  ContentSource,
+  CreateContentSourceOptions,
+  PageMeta,
+  ResolvedLink,
+} from './types.js';
 
 /** Locale assumed for a page, and for a read, that names none. */
 const FALLBACK_LOCALE = 'en';
@@ -26,6 +32,8 @@ export function createContentSource({
   // Slug → its versions, keyed by locale. Insertion order is manifest order,
   // which getPages/getTree preserve.
   const bySlug = new Map<string, Map<string, PageMeta>>();
+  // Original path → page, for resolving the links documents make to each other.
+  const bySource = new Map<string, PageMeta>();
   const locales: string[] = [];
 
   for (const page of pages) {
@@ -48,6 +56,7 @@ export function createContentSource({
     }
     versions.set(locale, page);
     if (!locales.includes(locale)) locales.push(locale);
+    bySource.set(page.source.replaceAll('\\', '/'), page);
   }
 
   /** The version of a page closest to `locale`: it, else the default, else any. */
@@ -90,6 +99,9 @@ export function createContentSource({
     getLocales() {
       return [...locales];
     },
+    resolveLink(href, fromSource) {
+      return resolveLink(href, fromSource, bySource);
+    },
     async getPage(slug, locale = defaultLocale) {
       const versions = bySlug.get(normalizeSlug(slug));
       const meta = versions === undefined ? undefined : resolve(versions, locale);
@@ -100,9 +112,45 @@ export function createContentSource({
   };
 }
 
-/** Tolerate a missing leading slash and a trailing slash when looking up a page. */
-function normalizeSlug(slug: string): string {
-  let s = slug.startsWith('/') ? slug : `/${slug}`;
-  if (s.length > 1 && s.endsWith('/')) s = s.slice(0, -1);
-  return s;
+// `scheme:` or protocol-relative `//host` — anything that leaves this origin.
+const ABSOLUTE_HREF = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
+
+/**
+ * The page a relative `*.md` link points at, resolved against the path of the
+ * document containing it.
+ *
+ * Resolving against the *source* rather than the filename is what makes nested
+ * documentation work: two sections can each hold a `config.md`, and
+ * `[overview](../guides/config.md)` still lands on the right one. It also
+ * settles language for free — a link from `nb/privacy.md` to `terms.md`
+ * resolves to `nb/terms.md`, the Norwegian version of that page.
+ *
+ * Off-site, root-relative and anchor-only hrefs, and files the manifest does
+ * not hold, all return null: the host leaves those alone rather than guessing.
+ */
+function resolveLink(
+  href: string,
+  fromSource: string,
+  bySource: Map<string, PageMeta>,
+): ResolvedLink | null {
+  if (href === '' || href.startsWith('#') || href.startsWith('/') || ABSOLUTE_HREF.test(href)) {
+    return null;
+  }
+
+  const suffixAt = href.search(/[#?]/);
+  const path = suffixAt === -1 ? href : href.slice(0, suffixAt);
+  const suffix = suffixAt === -1 ? '' : href.slice(suffixAt);
+  if (!/\.mdx?$/i.test(path)) return null;
+
+  const target = resolveRelativePath(fromSource, safeDecode(path));
+  const page = bySource.get(target);
+  return page === undefined ? null : { page, suffix };
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
