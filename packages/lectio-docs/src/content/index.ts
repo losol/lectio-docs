@@ -1,6 +1,14 @@
 export { createContentSource } from './content-source.js';
 export { buildTree } from './tree.js';
 export { parseFrontmatter, stripFrontmatter } from './frontmatter.js';
+export {
+  normalizeSlug,
+  pathToLocale,
+  pathToPage,
+  pathToSlug,
+  resolveRelativePath,
+} from './paths.js';
+export type { PagePath, PathToPageOptions } from './paths.js';
 export type { Frontmatter } from './frontmatter.js';
 export type {
   Manifest,
@@ -10,4 +18,5 @@ export type {
   ContentSource,
   CreateContentSourceOptions,
   LoadBody,
+  ResolvedLink,
 } from './types.js';

@@ -66,6 +66,13 @@ export interface TreeNode {
   children: TreeNode[];
 }
 
+/** A link resolved to the page it points at, and whatever followed the path. */
+export interface ResolvedLink {
+  page: PageMeta;
+  /** The `#fragment` or `?query` the href carried, or an empty string. */
+  suffix: string;
+}
+
 /** Host-injected body loader. Receives a page's metadata (use `page.file`). */
 export type LoadBody = (page: PageMeta) => string | Promise<string>;
 
@@ -104,4 +111,19 @@ export interface ContentSource {
    * `[defaultLocale]` rather than nothing — one locale, not zero.
    */
   getLocales(): string[];
+  /**
+   * The page a relative `*.md` link points at, resolved against the `source`
+   * path of the document containing it — pass `page.source`.
+   *
+   * Documentation is authored to read on disk and on a forge as well as in a
+   * host, so documents link to each other by path. Resolving against the
+   * source rather than the bare filename is what lets two sections each hold a
+   * `config.md`, and settles language on the way: a link from `nb/privacy.md`
+   * to `terms.md` lands on the Norwegian version of that page.
+   *
+   * Null for off-site, root-relative and anchor-only hrefs, and for files the
+   * manifest doesn't hold — leave those as the author wrote them, so a typo
+   * reads as a broken link instead of pointing somewhere unintended.
+   */
+  resolveLink(href: string, fromSource: string): ResolvedLink | null;
 }
