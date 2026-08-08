@@ -5,6 +5,13 @@ export interface DocSource {
   /** Target path in output directory, e.g. "/" or "/libraries" */
   target: string;
 
+  /**
+   * Globs to leave out of this source, e.g. `['docs/ADR/**']` to publish the
+   * documentation without its decision records. Relative to the repo root, the
+   * same as `glob`. `node_modules`, `dist` and `.next` are always excluded.
+   */
+  ignore?: string[];
+
   /** Read title from nearest package.json "name" field (strips @scope/) */
   titleFromPackageJson?: boolean;
 
@@ -34,6 +41,18 @@ export interface DocsConfig {
    * Omit it and pages simply carry no `editUrl`.
    */
   editUrl?: string;
+
+  /**
+   * Template for linking to a source file on its forge, `{path}` replaced by
+   * the file's repo-relative path — `https://github.com/org/repo/blob/main/{path}`.
+   *
+   * Documentation links to files that aren't published: a README outside the
+   * collected globs, a section this deployment leaves out. With a template,
+   * those links go to the forge instead of nowhere; without one, they are left
+   * as the author wrote them. Recorded in the manifest, since the host that
+   * renders the links reads that rather than this config.
+   */
+  sourceUrl?: string;
 
   /**
    * Locales this documentation set is written in, as BCP-47 tags, e.g.

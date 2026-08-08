@@ -102,6 +102,16 @@ export function createContentSource({
     resolveLink(href, fromSource) {
       return resolveLink(href, fromSource, bySource);
     },
+    sourceHref(path) {
+      const template = manifest.sourceUrl;
+      if (template === undefined) return null;
+      const segments = path.split('/');
+      // `.` and `..` would resolve against the template's own path and land
+      // somewhere other than the file asked for, so they get no URL at all.
+      if (segments.some((segment) => segment === '.' || segment === '..')) return null;
+      // Per segment: a filename may hold spaces or `#`, and `/` must survive.
+      return template.replaceAll('{path}', segments.map(encodeURIComponent).join('/'));
+    },
     async getPage(slug, locale = defaultLocale) {
       const versions = bySlug.get(normalizeSlug(slug));
       const meta = versions === undefined ? undefined : resolve(versions, locale);
@@ -125,8 +135,9 @@ const ABSOLUTE_HREF = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
  * settles language for free — a link from `nb/privacy.md` to `terms.md`
  * resolves to `nb/terms.md`, the Norwegian version of that page.
  *
- * Off-site, root-relative and anchor-only hrefs, and files the manifest does
- * not hold, all return null: the host leaves those alone rather than guessing.
+ * Null for hrefs that are not relative links to markdown at all — off-site,
+ * root-relative, anchor-only. A link to a file the collected set doesn't hold
+ * still resolves, with a null `page`, so the host can send it to the forge.
  */
 function resolveLink(
   href: string,
@@ -143,8 +154,12 @@ function resolveLink(
   if (!/\.mdx?$/i.test(path)) return null;
 
   const target = resolveRelativePath(fromSource, safeDecode(path));
-  const page = bySource.get(target);
-  return page === undefined ? null : { page, suffix };
+  // Above the collection root: resolveRelativePath keeps the `..` it could not
+  // consume, and there is no file here to name. Resolving it with a null page
+  // would hand the host a path to send to the forge — the "points somewhere
+  // unintended" outcome this whole function exists to rule out.
+  if (target === '..' || target.startsWith('../')) return null;
+  return { page: bySource.get(target) ?? null, path: target, suffix };
 }
 
 function safeDecode(value: string): string {
