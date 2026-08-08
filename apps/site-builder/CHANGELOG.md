@@ -1,5 +1,13 @@
 # lectio-docs
 
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [cd27ea7]
+  - @eventuras/lectio-docs@0.5.0
+  - @eventuras/lectio-docs-react@0.1.4
+
 ## 0.2.3
 
 ### Patch Changes
