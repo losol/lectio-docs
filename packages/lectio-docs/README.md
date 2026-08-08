@@ -95,7 +95,7 @@ it means, resolved against the **source path of the document containing it**:
 ```ts
 const page = await source.getPage('/privacy', 'nb');
 const link = source.resolveLink('terms-of-use.md', page.source);
-// → { page: { slug: '/terms', locale: 'nb', … }, suffix: '' }
+// → { page: { slug: '/terms', locale: 'nb', … }, path: 'nb/terms-of-use.md', suffix: '' }
 ```
 
 Resolving against the source rather than the bare filename is what lets two
@@ -103,9 +103,35 @@ sections each hold a `config.md` — `[overview](../guides/config.md)` still lan
 on the right one — and it settles language on the way: the link above came from
 `nb/privacy-policy.md`, so it resolved to the Norwegian `/terms`.
 
-Off-site, root-relative and anchor-only hrefs return null, as do files the
-manifest doesn't hold. Leave those as the author wrote them: a typo should read
-as a broken link, not point somewhere unintended.
+Off-site, root-relative and anchor-only hrefs return null — leave those as the
+author wrote them.
+
+### Links to files you don't publish
+
+Documentation links to files that aren't in the collected set: a README outside
+the globs, a section a deployment leaves out. Those still resolve, with a null
+`page`, so they can go to the forge rather than nowhere. Give the collector a
+`sourceUrl` and the template travels in the manifest:
+
+```ts
+export default defineDocsConfig({
+  output: '.lectio',
+  sourceUrl: 'https://github.com/org/repo/blob/main/{path}',
+  sources: [{ glob: 'docs/**/*.md', target: '/', ignore: ['docs/ADR/**'] }],
+});
+```
+
+```ts
+const link = source.resolveLink(href, page.source);
+if (link) {
+  const target = link.page
+    ? toPageUrl(link.page.slug)          // yours to shape
+    : source.sourceHref(link.path);      // null if no sourceUrl is configured
+}
+```
+
+`ignore` is how a source leaves part of a tree out — decision records, drafts —
+without narrowing the glob into something unreadable.
 
 ## Languages (opt-in)
 

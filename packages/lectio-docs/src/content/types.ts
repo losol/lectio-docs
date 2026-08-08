@@ -48,6 +48,13 @@ export interface Manifest {
   version: 1;
   /** All collected pages, in collection order. */
   pages: PageMeta[];
+  /**
+   * Template for linking to a source file on its forge, `{path}` replaced by
+   * the file's repo-relative path — from `DocsConfig.sourceUrl`. Recorded here
+   * so it travels with the content: a host reads the manifest, not the config,
+   * and only the collector knows which repo the files came from.
+   */
+  sourceUrl?: string;
 }
 
 /** A page with its body loaded. */
@@ -66,9 +73,18 @@ export interface TreeNode {
   children: TreeNode[];
 }
 
-/** A link resolved to the page it points at, and whatever followed the path. */
+/** A link resolved to the file it points at, and whatever followed the path. */
 export interface ResolvedLink {
-  page: PageMeta;
+  /**
+   * The page for that file, or null when the collected set doesn't hold one —
+   * documentation routinely links to files that aren't published, a README a
+   * source didn't cover or a section a deployment leaves out. The link is
+   * still resolved, so a host can send it to the forge via
+   * {@link ContentSource.sourceHref} instead of rendering a dead end.
+   */
+  page: PageMeta | null;
+  /** The file the link resolved to, relative to the repo root. */
+  path: string;
   /** The `#fragment` or `?query` the href carried, or an empty string. */
   suffix: string;
 }
@@ -126,4 +142,10 @@ export interface ContentSource {
    * reads as a broken link instead of pointing somewhere unintended.
    */
   resolveLink(href: string, fromSource: string): ResolvedLink | null;
+  /**
+   * Where a source file lives on its forge, from the manifest's `sourceUrl`
+   * template. Null when the manifest carries none. Use it for the links
+   * `resolveLink` resolves to a file with no page.
+   */
+  sourceHref(path: string): string | null;
 }

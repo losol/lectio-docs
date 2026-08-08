@@ -32,10 +32,15 @@ interface CollectOptions {
 export async function collect({ rootDir, config, configDir }: CollectOptions): Promise<void> {
   // Fail fast on a template without the placeholder — it would otherwise
   // silently resolve to the same edit URL for every page.
-  if (config.editUrl && !config.editUrl.includes('{path}')) {
-    throw new Error(
-      `docs config: editUrl must contain a {path} placeholder, got "${config.editUrl}"`,
-    );
+  for (const [name, template] of [
+    ['editUrl', config.editUrl],
+    ['sourceUrl', config.sourceUrl],
+  ] as const) {
+    if (template && !template.includes('{path}')) {
+      throw new Error(
+        `docs config: ${name} must contain a {path} placeholder, got "${template}"`,
+      );
+    }
   }
 
   const locales = config.locales ?? [];
@@ -61,7 +66,7 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
   for (const source of config.sources) {
     const files = await fg(source.glob, {
       cwd: rootDir,
-      ignore: ['**/node_modules/**', '**/dist/**', '**/.next/**'],
+      ignore: ['**/node_modules/**', '**/dist/**', '**/.next/**', ...(source.ignore ?? [])],
       dot: false,
     });
 
@@ -125,7 +130,7 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
 
   warnOnSlugDisagreement(pages, locales);
 
-  const manifest: Manifest = { version: 1, pages };
+  const manifest: Manifest = { version: 1, pages, sourceUrl: config.sourceUrl };
   const manifestPath = join(outputDir, 'manifest.json');
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
 
@@ -180,18 +185,32 @@ function buildTargetPath(
 }
 
 /**
- * Get the static base directory from a glob pattern.
- * "docs/(star)(star)/(star).mdx" -> "docs"
- * "libs/(star)/README.md" -> "libs"
+ * The static base directory a glob starts from, so a collected file keeps its
+ * path below that base — `docs/**\/*.md` is rooted at `docs`.
+ *
+ * fast-glob is asked rather than told: recognising which characters make a
+ * segment dynamic means knowing about `*`, braces, character classes and
+ * extglob (`!(ADR)`), and getting that list short by one silently produces
+ * paths with `../` in them.
  */
 function getGlobBase(glob: string): string {
-  const parts = glob.split('/');
-  const staticParts: string[] = [];
-  for (const part of parts) {
-    if (part.includes('*') || part.includes('{') || part.includes('?')) break;
-    staticParts.push(part);
+  // One task per brace branch, each with its own base — `docs/{a,b}/**` gives
+  // `docs/a` and `docs/b`. Root at what they share, or files from every branch
+  // but the first sit outside the base and slug with `../` in them.
+  const bases = fg.generateTasks(glob).map((task) => task.base);
+  return bases.length === 0 ? '.' : bases.reduce(commonBase);
+}
+
+/** The deepest directory two paths share, `.` when they share none. */
+function commonBase(a: string, b: string): string {
+  const left = a.split('/');
+  const right = b.split('/');
+  const shared: string[] = [];
+  for (let i = 0; i < Math.min(left.length, right.length); i++) {
+    if (left[i] !== right[i]) break;
+    shared.push(left[i] as string);
   }
-  return staticParts.join('/') || '.';
+  return shared.join('/') || '.';
 }
 
 /**
