@@ -1,5 +1,12 @@
 # @eventuras/lectio-docs-react
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [c6c0efb]
+  - @eventuras/lectio-docs@0.6.0
+
 ## 0.1.4
 
 ### Patch Changes
