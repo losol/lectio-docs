@@ -23,7 +23,7 @@
 
 import { cpSync, existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -75,7 +75,7 @@ if (!configPath) {
   }
 }
 
-const config = (await import(pathToFileURL(configPath).href)).default;
+const config = await loadConfig(configPath);
 if (!config?.sources || !config?.output) {
   console.error('The docs config must export { output, sources }.');
   process.exit(1);
@@ -222,3 +222,59 @@ rmSync(outDir, { recursive: true, force: true });
 cpSync(join(siteDir, 'build', 'client'), outDir, { recursive: true });
 writeFileSync(join(outDir, '.gitignore'), selfIgnore);
 console.log(`\nDocs site built → ${outDir}`);
+
+/**
+ * Import the docs config, whatever the repo around it looks like.
+ *
+ * Node reads a `.ts` file's module system off the nearest package.json, so a
+ * repo that declares `"type": "commonjs"` meets `export default` with a bare
+ * SyntaxError. The config is fine; only where it sits is wrong. Retrying
+ * through an `.mts` sibling settles it — that extension is ESM whatever the
+ * package.json says, and staying in the same directory keeps the config's own
+ * imports resolving.
+ */
+async function loadConfig(path) {
+  try {
+    return (await import(pathToFileURL(path).href)).default;
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) explainAndExit(path, error);
+
+    const shim = join(dirname(path), `.lectio.config.${process.pid}.mts`);
+    cpSync(path, shim);
+    try {
+      const loaded = (await import(pathToFileURL(shim).href)).default;
+      // Node has already printed its own warning about the module type by now.
+      // Say what we did with it, or a working build reads as a broken one.
+      console.log(
+        `Read ${relative(cwd, path)} as an ES module. The warning above is Node's:\n` +
+          'the nearest package.json needs "type": "module" to silence it.\n',
+      );
+      return loaded;
+    } catch (retry) {
+      // Name the file the user has, not the copy they never see.
+      retry.message = retry.message.replaceAll(shim, path);
+      explainAndExit(path, retry);
+    } finally {
+      rmSync(shim, { force: true });
+    }
+  }
+}
+
+/** What went wrong, and — for the causes we know — what fixes it. */
+function explainAndExit(path, error) {
+  console.error(`Could not load ${relative(cwd, path)}:\n  ${error.message}\n`);
+
+  if (error.code === 'ERR_MODULE_NOT_FOUND') {
+    console.error(
+      'The config imports a package that is not installed here. Running it with\n' +
+        '`npx lectio-docs`, without installing? Make the import type-only\n' +
+        '(`import type { DocsConfig }`) or drop it — the config is a plain object.',
+    );
+  } else if (error.code === 'ERR_UNKNOWN_FILE_EXTENSION') {
+    console.error(
+      `This Node (${process.version}) cannot run a TypeScript config: it needs\n` +
+        'Node 22.18 or later. Rename the file to docs.config.mjs to run it here.',
+    );
+  }
+  process.exit(1);
+}
