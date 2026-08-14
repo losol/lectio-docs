@@ -20,6 +20,24 @@ export interface DocSource {
 
   /** Override the section title shown in navigation */
   sectionTitle?: string;
+
+  /**
+   * Path segment names in the order they should appear in the navigation,
+   * wherever they occur in this source:
+   *
+   * ```ts
+   * { glob: 'docs/**​/*.md', target: '/', order: ['concepts', 'reference', 'recipes'] }
+   * ```
+   *
+   * Eight sections holding those same three subfolders then read the same way
+   * in all eight, from one line. This is the only handle on a directory that
+   * holds no page of its own — there is no file to put frontmatter in.
+   *
+   * A name's position counts from 1 and shares its scale with a page's `order:`
+   * frontmatter, so the two can be mixed at one level. Everything unnamed
+   * follows, alphabetically.
+   */
+  order?: string[];
 }
 
 export interface DocsConfig {

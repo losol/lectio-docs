@@ -62,7 +62,8 @@ export default {
 
 - **`sources`** — each is a glob plus the `target` path it mounts under. Globs
   are relative to where you run the command; `node_modules`, `dist`, `.next` and
-  dotfiles are skipped automatically.
+  dotfiles are skipped automatically. Add `order: ['concepts', 'reference']` to
+  a source to fix the order its folders appear in.
 - **`editUrl`** — an "edit this page" link template; `{path}` is filled per page.
 - **`sourceUrl`** — where a file lives in the repository. Used for links to
   files the site doesn't publish; see [Configuration](guides/configuration.md).

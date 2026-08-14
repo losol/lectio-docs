@@ -4,6 +4,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import fg from 'fast-glob';
 
 import { parseFrontmatter } from '../content/frontmatter.js';
+import { sortPages } from '../content/order.js';
 import { normalizeSlug, pathToLocale, pathToSlug } from '../content/paths.js';
 import type { Manifest, PageMeta } from '../content/types.js';
 import type { DocSource, DocsConfig } from './config.js';
@@ -75,6 +76,10 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
       continue;
     }
 
+    // Sorted per source, then appended: source order stays sidebar order, and
+    // each source arranges what it collected on its own terms.
+    const collected: PageMeta[] = [];
+
     for (const file of files) {
       const sourcePath = resolve(rootDir, file);
       const targetPath = buildTargetPath(file, source, outputDir, locales);
@@ -106,7 +111,7 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
         );
       }
       const sourceRel = String(frontmatter.source ?? relative(rootDir, sourcePath)).replaceAll('\\', '/');
-      pages.push({
+      collected.push({
         slug,
         title: String(frontmatter.title ?? slugTitle(slug)),
         description: frontmatter.description == null ? undefined : String(frontmatter.description),
@@ -126,6 +131,9 @@ export async function collect({ rootDir, config, configDir }: CollectOptions): P
       console.log(`  ${relative(rootDir, sourcePath)} → ${relTarget}`);
       totalFiles++;
     }
+
+    warnOnUnmatchedOrder(source, collected);
+    pages.push(...sortPages(collected, { order: source.order }));
   }
 
   warnOnSlugDisagreement(pages, locales);
@@ -317,6 +325,22 @@ function formatFrontmatter(data: Record<string, unknown>): string {
   });
 
   return `---\n${lines.join('\n')}\n---\n\n`;
+}
+
+/**
+ * A name in `order` that matches nothing orders nothing, and the symptom — a
+ * sidebar that simply stays as it was — points nowhere near the typo.
+ */
+function warnOnUnmatchedOrder(source: DocSource, pages: PageMeta[]): void {
+  if (source.order === undefined || source.order.length === 0) return;
+
+  const segments = new Set(pages.flatMap((page) => page.slug.split('/').filter(Boolean)));
+  const unmatched = source.order.filter((name) => !segments.has(name));
+  if (unmatched.length > 0) {
+    console.warn(
+      `  ⚠ ${source.glob}: order names nothing this source collected: ${unmatched.join(', ')}`,
+    );
+  }
 }
 
 /**
