@@ -1,6 +1,6 @@
 {
   "name": "lectio-docs",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Run one command, get a docs site: collects scattered repo docs and builds a static, searchable site.",
   "license": "MIT",
   "repository": {
