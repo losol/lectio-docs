@@ -39,10 +39,38 @@ config a `sourceUrl`. Without one it is left exactly as written.
 ## Navigation order
 
 The sidebar follows the order pages appear in the manifest, which is the order
-your `sources` are listed — so reordering sources reorders the sidebar. Two
-rules override it: the home page always leads, and `adr/` (or `decisions/`)
-sinks to the bottom of whatever level it sits on, since decision records are
-reference material rather than reading material.
+your `sources` are listed — so reordering sources reorders the sidebar.
+
+Within a source, name what should come first:
+
+```ts
+{ glob: 'docs/**/*.md', target: '/', order: ['concepts', 'reference', 'recipes'] }
+```
+
+`order` matches path segments wherever they occur, so eight sections holding
+those same three subfolders read the same way in all eight, from one line. A
+segment is a folder or a page — `order: ['getting-started', 'guides']` puts a
+page ahead of a folder, which is how this site's own sidebar is arranged. And
+it is the only handle on a subfolder that has no page of its own: there is no
+file to put frontmatter in.
+
+A single page can also order itself from its frontmatter:
+
+```yaml
+---
+title: Adressering
+order: 1
+---
+```
+
+Position in the `order` list counts from 1 and means the same as the frontmatter
+number, so the two mix at one level. Everything you don't name follows,
+alphabetically — numeric-aware, so `2-setup.md` comes before `10-deploy.md`.
+
+Two rules override all of it: the home page always leads, and `adr/` (or
+`decisions/`) sinks to the bottom of whatever level it sits on — named in
+`order` or not — since decision records are reference material rather than
+reading material.
 
 ## Frontmatter
 

@@ -86,6 +86,41 @@ const pages = files.map((file) => {                 // file is relative to the c
 const source = createContentSource({ manifest: { version: 1, pages }, loadBody, defaultLocale: 'en' });
 ```
 
+`sortPages(pages, { order })` puts them in reading order — the same sort
+`collect()` runs, since the navigation follows manifest order.
+
+## Navigation order
+
+The tree follows the manifest, and the manifest follows your `sources` — source
+order is sidebar order. Within a source, two things decide:
+
+```ts
+{ glob: 'docs/**/*.md', target: '/', order: ['concepts', 'reference', 'recipes'] }
+```
+
+```yaml
+---
+title: Adressering
+order: 1
+---
+```
+
+`order` on a source names path segments wherever they occur, so eight sections
+holding the same three subfolders read the same way in all eight — and it is the
+only handle on a directory that holds no page of its own, which has no file to
+put frontmatter in. `order:` in frontmatter does the same for one page. Position
+in the list counts from 1 and shares its scale with the frontmatter field, so
+the two mix at one level.
+
+Everything unnamed follows, sorted alphabetically (numeric-aware, so `2-x`
+precedes `10-x`) rather than in the order the filesystem happened to return —
+that order differs between machines, which is what makes the same three
+subfolders come out three different ways in three sections.
+
+Two rules still override all of it, in `buildTree`: the home page leads, and
+`adr/` (or `decisions/`) sinks to the bottom of its level, named in `order` or
+not — decision records are reference material.
+
 ## Links between documents
 
 Documentation is written to read on disk and on a forge as well as in a host, so
@@ -213,7 +248,7 @@ hook wraps the provider with debouncing and stale-response protection.
 | Import | Runs in | Contents |
 | --- | --- | --- |
 | `@eventuras/lectio-docs` | Node, build time | `collect`, `runCollect`, `defineDocsConfig` |
-| `@eventuras/lectio-docs/content` | anywhere | `createContentSource`, `buildTree`, `pathToPage`, `parseFrontmatter`, types |
+| `@eventuras/lectio-docs/content` | anywhere | `createContentSource`, `buildTree`, `sortPages`, `pathToPage`, `parseFrontmatter`, types |
 | `@eventuras/lectio-docs/search` | browser + Node | `OramaProvider`, `SearchProvider`/`SearchResult` types |
 | `@eventuras/lectio-docs/build-index` | Node, build time | `buildSearchIndex` |
 

@@ -17,7 +17,10 @@ await collect({
   configDir: appDir,
   config: {
     output: '.lectio',
-    sources: [{ glob: 'docs/**/*.md', target: '/' }],
+    // Reading order, not alphabetical: start here, then the CLI, then detail.
+    sources: [
+      { glob: 'docs/**/*.md', target: '/', order: ['getting-started', 'cli', 'guides', 'deployment'] },
+    ],
     editUrl: 'https://github.com/losol/lectio-docs/edit/main/{path}',
     // Where a link to a file we don't publish goes — ../ROADMAP.md and the like.
     sourceUrl: 'https://github.com/losol/lectio-docs/blob/main/{path}',

@@ -178,6 +178,14 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   generated config *is* the navigation — configurability is editing the file.
   `buildTree` adds the two orderings source order can't express: home leads,
   and `adr/` sinks to the bottom of its level.
+- ✅ **Order within a source.** Source order was the whole story, and *inside* a
+  source the filesystem decided — so the same three subfolders came out in three
+  different orders in three sections. `sortPages` (exported, pure) sorts by
+  `order` on the source, which names path segments wherever they occur, then by
+  a page's `order:` frontmatter on the same scale, then alphabetically.
+  `collect()` runs it per source, so manifest order stays the contract and
+  `buildTree` is untouched. Naming segments rather than files is what reaches a
+  subfolder with no page of its own to carry frontmatter.
 - ✅ **Cross-document links resolve.** Documents link to each other by path
   (`../reference/config.md#targets`) so they read on disk and on the forge; the
   docs route resolves those through `source.resolveLink` in the loader — the
