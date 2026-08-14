@@ -4,4 +4,4 @@ packages:
   - 'examples/*'
 minimumReleaseAgeExclude:
   - '@eventuras/markdown@0.12.0 || 0.13.0'
-  - '@eventuras/ratio-ui@2.14.0 || 2.15.0'
+  - '@eventuras/ratio-ui@2.14.0 || 2.15.0 || 2.17.3'

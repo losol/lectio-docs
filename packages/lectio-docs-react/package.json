@@ -46,7 +46,7 @@
     }
   },
   "devDependencies": {
-    "@eventuras/ratio-ui": "^2.16.0",
+    "@eventuras/ratio-ui": "^2.17.3",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@vitejs/plugin-react": "^6.0.4",
