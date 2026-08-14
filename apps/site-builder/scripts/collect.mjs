@@ -19,6 +19,8 @@ await collect({
     output: '.lectio',
     sources: [{ glob: 'docs/**/*.md', target: '/' }],
     editUrl: 'https://github.com/losol/lectio-docs/edit/main/{path}',
+    // Where a link to a file we don't publish goes — ../ROADMAP.md and the like.
+    sourceUrl: 'https://github.com/losol/lectio-docs/blob/main/{path}',
   },
 });
 

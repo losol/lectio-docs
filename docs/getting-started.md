@@ -17,7 +17,7 @@ npx lectio-docs dev
 ```
 
 It scaffolds a starter `docs.config.ts` and opens a local server, so a fresh
-repo shows a site right away. See [The lectio CLI](/cli) for configuring
+repo shows a site right away. See [The lectio CLI](cli.md) for configuring
 sources, branding and deploy.
 
 ## The library path — embed it in your app
