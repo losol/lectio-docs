@@ -1,5 +1,7 @@
 export { createContentSource } from './content-source.js';
 export { buildTree } from './tree.js';
+export { sortPages } from './order.js';
+export type { SortPagesOptions } from './order.js';
 export { parseFrontmatter, stripFrontmatter } from './frontmatter.js';
 export {
   normalizeSlug,

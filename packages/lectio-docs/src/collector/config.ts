@@ -1,5 +1,10 @@
 export interface DocSource {
-  /** Glob pattern relative to repo root, e.g. "docs/**​/*.mdx" or "libs/star/README.md" */
+  /**
+   * Glob pattern relative to the repo root — a whole tree, or one file per
+   * package. Copyable examples are in the README: a `*` next to a `/` would end
+   * this comment, and both ways around that (an escape, a zero-width space)
+   * paste back as a glob that matches the wrong files.
+   */
   glob: string;
 
   /** Target path in output directory, e.g. "/" or "/libraries" */
@@ -20,6 +25,24 @@ export interface DocSource {
 
   /** Override the section title shown in navigation */
   sectionTitle?: string;
+
+  /**
+   * Path segment names in the order they should appear in the navigation,
+   * wherever they occur in this source:
+   *
+   * ```ts
+   * order: ['concepts', 'reference', 'recipes']
+   * ```
+   *
+   * Eight sections holding those same three subfolders then read the same way
+   * in all eight, from one line. This is the only handle on a directory that
+   * holds no page of its own — there is no file to put frontmatter in.
+   *
+   * A name's position counts from 1 and shares its scale with a page's `order:`
+   * frontmatter, so the two can be mixed at one level. Everything unnamed
+   * follows, alphabetically.
+   */
+  order?: string[];
 }
 
 export interface DocsConfig {

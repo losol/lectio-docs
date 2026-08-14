@@ -41,7 +41,8 @@ export function starterConfig(cwd) {
   }
 
   return `// Created by lectio — edit to taste, then re-run.
-// Source order is sidebar order.
+// Source order is sidebar order. Within a source, folders sort alphabetically
+// unless you name them: order: ['concepts', 'reference', 'recipes'].
 export default {
   output: '.lectio',
   sources: [
