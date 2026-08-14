@@ -4,11 +4,13 @@ import { Link, useLoaderData } from 'react-router';
 import type { TreeNode } from '@eventuras/lectio-docs/content';
 import { MarkdownContent, extractHeadings, type MarkdownComponents } from '@eventuras/markdown';
 import { Heading } from '@eventuras/ratio-ui/core/Heading';
+import { Link as TextLink } from '@eventuras/ratio-ui/core/Link';
 import { NavTree } from '@eventuras/ratio-ui/core/NavTree';
 import { TableOfContents } from '@eventuras/ratio-ui/core/TableOfContents';
 import { getTextContent, slugify } from '@eventuras/ratio-ui/utils';
 
 import { getContentSource } from '../content.server';
+import { linkKey, resolveDocLinks, type DocLinks } from '../doc-links';
 import docsStylesheet from './docs.css?url';
 
 export function links() {
@@ -27,8 +29,9 @@ export async function loader({ params }: { params: Record<string, string | undef
 
   // navGroups is computed here (plain, serializable data) rather than in the
   // component so the site header can pick it up via useMatches and render the
-  // same tree in its mobile Navbar.Collapse.
-  return { page, navGroups: toNavGroups(source.getTree()), slug };
+  // same tree in its mobile Navbar.Collapse. Links are resolved here for a
+  // second reason: only the server holds the manifest.
+  return { page, navGroups: toNavGroups(source.getTree()), slug, links: resolveDocLinks(source, page) };
 }
 
 /**
@@ -82,15 +85,63 @@ function NavLink({ href, ...rest }: { href: string; children: React.ReactNode })
   return <Link to={href} {...rest} />;
 }
 
+// `scheme:` or protocol-relative `//host` — anything that leaves this origin.
+const ABSOLUTE_HREF = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
+
+/**
+ * A link in the body, pointed at wherever the loader resolved it: a page of
+ * this site, a file on the forge, or — for anything it left alone (off-site,
+ * anchors within the page) — exactly what the author wrote.
+ *
+ * In-site destinations navigate client-side, the way the nav does; the rest
+ * are plain anchors, off-site ones in a new tab.
+ */
+function DocAnchor({
+  href = '',
+  links,
+  children,
+}: {
+  href?: string;
+  links: DocLinks;
+  children: React.ReactNode;
+}) {
+  const resolved = links[linkKey(href)];
+  const to = resolved?.href ?? href;
+  const internal = resolved ? !resolved.external : to.startsWith('/');
+
+  if (internal) {
+    // ratio-ui owns the appearance, React Router the navigation: it renders
+    // `component` with both props, and its own href (from `to`) wins.
+    return (
+      <TextLink href={to} component={Link} componentProps={{ to }}>
+        {children}
+      </TextLink>
+    );
+  }
+
+  return (
+    <TextLink
+      href={to}
+      componentProps={
+        ABSOLUTE_HREF.test(to) ? { rel: 'noopener noreferrer', target: '_blank' } : undefined
+      }
+    >
+      {children}
+    </TextLink>
+  );
+}
+
 export default function DocsPage() {
-  const { page, navGroups, slug } = useLoaderData<typeof loader>();
+  const { page, navGroups, slug, links } = useLoaderData<typeof loader>();
 
   const headings = useMemo(() => extractHeadings(page.body), [page.body]);
 
-  // The only override left: anchor ids on h2/h3, slugged with ratio-ui's own
-  // slugify — the same function extractHeadings uses for the TOC, so scroll-spy
-  // and anchors can't drift. Everything else (code blocks, inline code,
-  // blockquotes, dividers) renders theme-aware upstream since markdown 0.13.
+  // Two overrides: anchor ids on h2/h3, slugged with ratio-ui's own slugify —
+  // the same function extractHeadings uses for the TOC, so scroll-spy and
+  // anchors can't drift — and anchors, which follow the loader's resolution of
+  // the links documents make to each other. Everything else (code blocks,
+  // inline code, blockquotes, dividers) renders theme-aware upstream since
+  // markdown 0.13.
   const markdownComponents: MarkdownComponents = useMemo(
     () => ({
       h2: ({ children }) => (
@@ -103,8 +154,13 @@ export default function DocsPage() {
           {children}
         </Heading>
       ),
+      a: ({ href, children }) => (
+        <DocAnchor href={href} links={links}>
+          {children}
+        </DocAnchor>
+      ),
     }),
-    [],
+    [links],
   );
 
   return (

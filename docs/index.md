@@ -16,3 +16,7 @@ Router.
   `getPages` and `getPage`, with the host injecting how bodies load.
 - **The host** — owns routing, rendering and theme. This site loads bodies from
   disk with `fs`, which works for SSR today and for prerendering later.
+
+Start with [Getting started](getting-started.md), or read the
+[vision & roadmap](../ROADMAP.md) — a file this site doesn't publish, so that
+link goes to the repository.
