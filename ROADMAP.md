@@ -178,6 +178,12 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   generated config *is* the navigation — configurability is editing the file.
   `buildTree` adds the two orderings source order can't express: home leads,
   and `adr/` sinks to the bottom of its level.
+- ✅ **Cross-document links resolve.** Documents link to each other by path
+  (`../reference/config.md#targets`) so they read on disk and on the forge; the
+  docs route resolves those through `source.resolveLink` in the loader — the
+  manifest is server-only, so a prerendered site has to settle links before the
+  page ships. Unpublished files fall back to `sourceUrl`. *Open:* links to a
+  directory (`../reference/`), which need a section index page to land on.
 - ✅ Search lives in the site chrome: the header renders the `<Search>`
   CommandPalette (built-in trigger + global ⌘K), available on every page —
   the standalone `/search` route is gone.

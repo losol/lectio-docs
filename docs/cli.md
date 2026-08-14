@@ -52,6 +52,7 @@ export default {
     },
   ],
   editUrl: 'https://github.com/your-org/your-repo/edit/main/{path}',
+  sourceUrl: 'https://github.com/your-org/your-repo/blob/main/{path}',
   site: {
     title: 'Developer Docs',
     githubUrl: 'https://github.com/your-org/your-repo',
@@ -63,9 +64,11 @@ export default {
   are relative to where you run the command; `node_modules`, `dist`, `.next` and
   dotfiles are skipped automatically.
 - **`editUrl`** — an "edit this page" link template; `{path}` is filled per page.
+- **`sourceUrl`** — where a file lives in the repository. Used for links to
+  files the site doesn't publish; see [Configuration](guides/configuration.md).
 - **`site`** — the title and GitHub link shown in the header.
 
-See [Configuration](/guides/configuration) for how targets become slugs.
+See [Configuration](guides/configuration.md) for how targets become slugs.
 
 ## Build and deploy
 
@@ -82,7 +85,7 @@ Netlify, GitHub Pages, an object store:
 npx wrangler pages deploy dist --project-name my-docs
 ```
 
-See [Deploy to Cloudflare](/deployment/cloudflare) for the full walkthrough —
+See [Deploy to Cloudflare](deployment/cloudflare.md) for the full walkthrough —
 fallback pages, CI and custom domains.
 
 ## `dev` vs `build` when there's no config
