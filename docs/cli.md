@@ -72,6 +72,22 @@ export default {
 
 See [Configuration](guides/configuration.md) for how targets become slugs.
 
+### The config file itself
+
+It is a module with a default export — a plain object, nothing to install. Two
+things about the file, both of which lectio now handles or explains rather than
+failing at:
+
+- **TypeScript needs Node 22.18 or later**, which strips the types on import.
+  On an older Node, name the file `docs.config.mjs` and it runs as it is.
+- **Keep imports type-only** if you run lectio without installing it
+  (`npx lectio-docs dev`). `import type { DocsConfig }` disappears with the
+  types; a value import like `defineDocsConfig` has to resolve at runtime, and
+  in a repo with no `node_modules` it can't.
+
+Nothing needs to change in your `package.json` — a config in a CommonJS repo, or
+in a repo with no `package.json` at all, is read as the ES module it is.
+
 ## Build and deploy
 
 ```sh
