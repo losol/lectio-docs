@@ -33,7 +33,7 @@ jobs:
           # changesets compares against the base branch, so it needs history.
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -51,7 +51,7 @@ jobs:
       # changeset publish ships whatever is on disk. No registry-url on
       # setup-node and no token in env — with NPM_TOKEN absent the action
       # leaves .npmrc alone and publishing rides on OIDC.
-      - uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+      - uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           version: pnpm changeset:version
           publish: pnpm release
