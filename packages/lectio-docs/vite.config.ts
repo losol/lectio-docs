@@ -31,6 +31,8 @@ export default defineConfig({
         'content/index': 'src/content/index.ts',
         'search/index': 'src/search/index.ts',
         'search/build-index': 'src/search/build-index.ts',
+        'plugins/index': 'src/plugins/index.ts',
+        'plugins/runtime': 'src/plugins/runtime.ts',
       },
       formats: ['es'],
     },

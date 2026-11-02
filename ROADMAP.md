@@ -60,6 +60,8 @@ packages/lectio-docs            @eventuras/lectio-docs — vanilla TS/Node, no R
   ./content      createContentSource: getTree / getPages / getPage — pure TS, agnostic
   ./search       OramaProvider + types
   ./build-index  buildSearchIndex — Orama index built from the manifest
+  ./plugins      definePlugin / resolvePlugins / generatePluginModule (config half)
+  ./plugins/runtime  createPluginRuntime / mountFence — vanilla browser half
 
 packages/lectio-docs-react      @eventuras/lectio-docs-react — React bindings
   .              useDocsSearch (headless hook) + <Search> (ratio-ui, optional peer)
@@ -232,6 +234,22 @@ how bodies are loaded** (`fetch` in a SPA, `import.meta.glob` with a bundler,
   keep collected lib/README content plain `.md`. `getPage().body` stays the
   raw-markdown path; MDX is a separate host-side loader, so the content-source
   contract is unchanged either way.
+- **Plugins: plain data in the config, a vanilla mount function in the
+  browser.** A plugin (first: `@eventuras/lectio-plugin-mermaid`) is a separate
+  package, so its dependencies never reach the core or the published site. Its
+  config half is JSON-safe data — the fence languages it claims and the module
+  specifier of its browser half — because the config is read in Node and
+  functions can't cross into the bundled app. The browser half renders a fence
+  into a plain element (`FenceRenderer`), so the contract has no framework in it;
+  each host adapts it with a container its framework leaves alone and
+  `mountFence`. Light DOM, not web components: page CSS reaches the output, and
+  there is no shadow DOM to theme through. A spike rendered Mermaid this way in
+  Chromium with the main chunk at ~4 kB and Mermaid loaded only on demand.
+  *Done:* the core contract (`./plugins`, `./plugins/runtime`). *Next:* the
+  React adapter in `apps/site-builder`, wiring in the `lectio` CLI (generate the
+  module, symlink consumer-installed plugins into `.lectio/site`), and the
+  Mermaid package itself. *Later, when a plugin needs it:* build-time hooks in
+  `collect()`, and remark plugins for new markdown syntax.
 - **Optional standalone renderer.** For the pure standalone-site case, Lectio can
   recommend/adapt to an existing renderer (Fumadocs is the best fit — Next.js,
   headless core, native Orama search) rather than building a bespoke theme.

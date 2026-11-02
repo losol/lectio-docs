@@ -243,6 +243,73 @@ gets the same index, no site build required. Using React? The
 [`useDocsSearch`](https://www.npmjs.com/package/@eventuras/lectio-docs-react)
 hook wraps the provider with debouncing and stale-response protection.
 
+## Plugins (opt-in)
+
+A plugin renders something markdown alone can't, such as a Mermaid diagram,
+without its dependencies landing in Lectio or in pages that don't use it. It
+has two halves, because the config is read in Node and the pages render in a
+browser:
+
+```ts
+// The config half: plain data, declared in the docs config.
+import { definePlugin } from '@eventuras/lectio-docs/plugins';
+
+export default (options = {}) =>
+  definePlugin({
+    name: 'mermaid',
+    fences: ['mermaid'], // renders mermaid code blocks
+    client: { module: '@eventuras/lectio-plugin-mermaid/client', options },
+  });
+```
+
+```ts
+// The browser half: renders a fence into a plain element. No framework.
+import type { PluginClientFactory } from '@eventuras/lectio-docs/plugins/runtime';
+
+const client: PluginClientFactory = (options) => ({
+  fences: {
+    mermaid: async (target, source) => {
+      const { default: mermaid } = await import('mermaid');
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', ...options });
+      const { svg } = await mermaid.render(`mermaid-${crypto.randomUUID()}`, source);
+      target.innerHTML = svg;
+      return () => { target.innerHTML = ''; };
+    },
+  },
+});
+export default client;
+```
+
+The host turns the config into a module its bundler can split:
+`generatePluginModule(config.plugins)` validates the plugins and returns the
+source of a module exporting a ready `plugins` runtime. Each client module sits
+behind its own dynamic `import()` and loads the first time a page renders one of
+its fences. A host without a build step can call `createPluginRuntime` itself.
+
+Rendering is framework-neutral too. Give a claimed fence an element your
+framework leaves alone, mount it, and dispose of it when the block goes away:
+
+```ts
+import { mountFence } from '@eventuras/lectio-docs/plugins/runtime';
+
+if (plugins.hasFence(language)) {           // synchronous, safe in a server render
+  const dispose = mountFence(plugins, element, {
+    language,
+    source,
+    onRendered: () => hideFallback(),       // keep the code block until then
+  });
+}
+```
+
+`mountFence` owns the awkward part: a block that goes away before its plugin
+has loaded renders nothing, and one that goes away mid-render is cleaned up at
+once.
+
+Options travel from the config into generated code, so they must be JSON.
+`resolvePlugins` rejects functions, dates and circular references, as well as
+duplicate names, two plugins claiming one fence, and fences with no client to
+render them.
+
 ## Entry points
 
 | Import | Runs in | Contents |
@@ -251,6 +318,8 @@ hook wraps the provider with debouncing and stale-response protection.
 | `@eventuras/lectio-docs/content` | anywhere | `createContentSource`, `buildTree`, `sortPages`, `pathToPage`, `parseFrontmatter`, types |
 | `@eventuras/lectio-docs/search` | browser + Node | `OramaProvider`, `SearchProvider`/`SearchResult` types |
 | `@eventuras/lectio-docs/build-index` | Node, build time | `buildSearchIndex` |
+| `@eventuras/lectio-docs/plugins` | anywhere, build time | `definePlugin`, `resolvePlugins`, `generatePluginModule`, types |
+| `@eventuras/lectio-docs/plugins/runtime` | browser + server render | `createPluginRuntime`, `mountFence`, client types |
 
 ## License
 

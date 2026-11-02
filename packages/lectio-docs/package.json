@@ -33,6 +33,14 @@
     "./build-index": {
       "types": "./dist/search/build-index.d.ts",
       "import": "./dist/search/build-index.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js"
+    },
+    "./plugins/runtime": {
+      "types": "./dist/plugins/runtime.d.ts",
+      "import": "./dist/plugins/runtime.js"
     }
   },
   "main": "./dist/index.js",

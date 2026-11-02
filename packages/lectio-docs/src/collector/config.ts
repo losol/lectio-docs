@@ -1,3 +1,5 @@
+import type { LectioPlugin } from '../plugins/types.js';
+
 export interface DocSource {
   /**
    * Glob pattern relative to the repo root — a whole tree, or one file per
@@ -106,6 +108,21 @@ export interface DocsConfig {
    * document shares one URL and stays one page in the navigation.
    */
   defaultLocale?: string;
+
+  /**
+   * Plugins that render what markdown alone can't, such as Mermaid diagrams:
+   *
+   * ```ts
+   * import mermaid from '@eventuras/lectio-plugin-mermaid';
+   *
+   * plugins: [mermaid()],
+   * ```
+   *
+   * `collect()` doesn't use them. The host that renders the pages does: it
+   * validates them with `resolvePlugins` and loads each plugin's browser half.
+   * See `@eventuras/lectio-docs/plugins`.
+   */
+  plugins?: LectioPlugin[];
 }
 
 export function defineDocsConfig(config: DocsConfig): DocsConfig {
