@@ -17,9 +17,9 @@ jobs:
   release:
     name: Version or publish
     runs-on: ubuntu-latest
-    # npm trusted publishing — no NPM_TOKEN anywhere. With no token set, the
-    # changesets action skips writing an .npmrc and pnpm exchanges this job's
-    # OIDC token for a short-lived credential; provenance comes with it.
+    # npm trusted publishing — no NPM_TOKEN anywhere. The changesets action
+    # never writes an .npmrc, so pnpm exchanges this job's OIDC token for a
+    # short-lived credential; provenance comes with it.
     #
     # One-time bootstrap per NEW package: npm cannot configure a trusted
     # publisher for a name that does not exist yet, so a package's first
@@ -45,17 +45,22 @@ jobs:
       # Pending changesets become a "version packages" PR. Once that PR is
       # merged there is nothing pending, and the same step publishes instead:
       # topologically ordered, tagged per package, and — since
-      # createGithubReleases defaults to true — released on GitHub as well.
+      # create-github-releases defaults to true — released on GitHub as well.
       #
       # `release` builds before publishing, per the action's own guidance:
       # changeset publish ships whatever is on disk. No registry-url on
-      # setup-node and no token in env — with NPM_TOKEN absent the action
-      # leaves .npmrc alone and publishing rides on OIDC.
+      # setup-node and no token in env — publishing rides on OIDC.
+      #
+      # Action v2 requires @changesets/cli v3 and fails outright on v2. It
+      # finds what was published through the CHANGESETS_OUTPUT file rather
+      # than stdout; `pnpm release` passes the env through to changeset
+      # publish, so tags and GitHub releases still work. The GitHub token
+      # comes from the github-token input (default: github.token), not from
+      # a GITHUB_TOKEN env var, and release commits and tags are pushed
+      # through the GitHub API.
       - uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          version: pnpm changeset:version
-          publish: pnpm release
-          commit: "chore: version packages"
-          title: "chore: version packages"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version-script: pnpm changeset:version
+          publish-script: pnpm release
+          commit-message: "chore: version packages"
+          pr-title: "chore: version packages"
